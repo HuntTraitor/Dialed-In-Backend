@@ -1,0 +1,33 @@
+services:
+  app:
+    container_name: web
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+      - DATABASE_HOST=${DB_HOST}
+      - DATABASE_PORT=${DB_PORT}
+    tty: true
+    build: .
+    ports:
+      - '3000:3000'
+    restart: on-failure
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+    extra_hosts:
+      - "localhost:172.17.0.1"
+
+  db:
+    image: postgres:latest
+    container_name: postgres_container
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+      - DATABASE_HOST=${DB_HOST}
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./db/sql/databases.sql:/docker-entrypoint-initdb.d/1.databases.sql
