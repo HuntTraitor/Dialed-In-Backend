@@ -27,7 +27,7 @@ func (a *App) loadAccountRoutes(router chi.Router) {
 		},
 	}
 
-	router.Post("/", accountHandler.Create)
+	router.Post("/", Make(accountHandler.Create))
 	router.Get("/", accountHandler.List)
 	router.Get("/{id}", accountHandler.GetById)
 	router.Put("/{id}", accountHandler.Update)

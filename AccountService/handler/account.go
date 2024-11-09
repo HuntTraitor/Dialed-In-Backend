@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hunttraitor/dialed-in-backend/errors"
 	"github.com/hunttraitor/dialed-in-backend/model"
 	"github.com/hunttraitor/dialed-in-backend/repository/account"
 	"net/http"
@@ -12,7 +13,7 @@ type Account struct {
 	Db *account.Db
 }
 
-func (h *Account) Create(w http.ResponseWriter, r *http.Request) {
+func (h *Account) Create(w http.ResponseWriter, r *http.Request) error {
 	var body struct {
 		Name     string `json:"name"`
 		Email    string `json:"email"`
@@ -20,8 +21,7 @@ func (h *Account) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		return errors.InvalidJSON()
 	}
 
 	account := model.Account{
@@ -31,25 +31,24 @@ func (h *Account) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newAccount, err := h.Db.Insert(r.Context(), account)
-	if err != nil {
-		fmt.Println("failed to insert:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	if err != nil && errors.IsPgErrorCode(err, errors.UniqueViolationErr) {
+		return errors.DuplicateEmail()
+	} else if err != nil {
+		return err
 	}
 
 	res, err := json.Marshal(newAccount)
 	if err != nil {
-		fmt.Println("failed to marshal:", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		return err
 	}
 
-	_, err = w.Write(res)
-	if err != nil {
-		fmt.Println("failed to write:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	_, err = w.Write(res)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (h *Account) List(w http.ResponseWriter, r *http.Request) {
