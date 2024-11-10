@@ -4,7 +4,7 @@ run: build
 	@./bin/uwe
 
 build:
-	@go build -o bin/uwe .
+	@go build -o bin/uwe ./cmd/api/.
 
 seed:
 	@go run cmd/seed/main.go

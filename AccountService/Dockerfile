@@ -22,4 +22,4 @@ RUN go install -v ./...
 RUN go install -mod=mod github.com/githubnemo/CompileDaemon
 RUN go get -v golang.org/x/tools/gopls
 
-ENTRYPOINT CompileDaemon --build="go build -a -installsuffix cgo -o main ." --command=./main
+ENTRYPOINT CompileDaemon --build="go build -a -installsuffix cgo -o main ./cmd/api/." --command=./main
