@@ -15,6 +15,7 @@ import (
 
 type envelope map[string]any
 
+// readIDParam reads the id parameter and returns the id if its valid
 func (app *application) readIDParam(r *http.Request) (int64, error) {
 	params := httprouter.ParamsFromContext(r.Context())
 
@@ -25,6 +26,7 @@ func (app *application) readIDParam(r *http.Request) (int64, error) {
 	return id, nil
 }
 
+// writeJSON writes data to the response so the client can see
 func (app *application) writeJSON(w http.ResponseWriter, status int, data any, headers http.Header) error {
 	js, err := json.MarshalIndent(data, "", "\t")
 	if err != nil {
