@@ -51,31 +51,36 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		// Retrieve ip from host
-		ip, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			app.serverErrorResponse(w, r, err)
-			return
-		}
+		// Check the rate limiting configuration in main.go
+		if app.config.limiter.enabled {
+			// Retrieve ip from host
+			ip, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err != nil {
+				app.serverErrorResponse(w, r, err)
+				return
+			}
 
-		// Assign a new rate limiter to a client if they were not found
-		mu.Lock()
-		if _, found := clients[ip]; !found {
-			clients[ip] = &client{limiter: rate.NewLimiter(2, 4)}
-		}
+			// Assign a new rate limiter to a client if they were not found
+			mu.Lock()
+			if _, found := clients[ip]; !found {
+				clients[ip] = &client{
+					limiter: rate.NewLimiter(rate.Limit(app.config.limiter.rps), app.config.limiter.burst),
+				}
+			}
 
-		// Set there last seen time to now
-		clients[ip].lastSeen = time.Now()
+			// Set there last seen time to now
+			clients[ip].lastSeen = time.Now()
 
-		// If the client has exceeded rate limits, send an error and unlock the mutex
-		if !clients[ip].limiter.Allow() {
+			// If the client has exceeded rate limits, send an error and unlock the mutex
+			if !clients[ip].limiter.Allow() {
+				mu.Unlock()
+				app.rateLimitExceededResponse(w, r)
+				return
+			}
+			// Unlock mutex and continue
 			mu.Unlock()
-			app.rateLimitExceededResponse(w, r)
-			return
 		}
 
-		// Unlock mutex and continue
-		mu.Unlock()
 		next.ServeHTTP(w, r)
 	})
 
