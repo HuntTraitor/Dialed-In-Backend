@@ -10,8 +10,12 @@ var (
 	ErrEditConflict   = errors.New("edit conflict")
 )
 
-type Models struct{}
+type Models struct {
+	Users UserModel
+}
 
 func NewModels(db *sql.DB) Models {
-	return Models{}
+	return Models{
+		Users: UserModel{DB: db},
+	}
 }
