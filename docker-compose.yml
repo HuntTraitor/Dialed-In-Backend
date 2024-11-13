@@ -8,6 +8,7 @@ services:
       - DATABASE_HOST=${DB_HOST}
       - DATABASE_PORT=${DB_PORT}
       - DATABASE_URL=${DB_URL}
+      - TEST_DB_URL=${TEST_DB_URL}
     tty: true
     build: .
     ports:
