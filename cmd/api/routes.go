@@ -1,21 +1,32 @@
 package main
 
 import (
-	"github.com/julienschmidt/httprouter"
+	"github.com/go-chi/chi/v5"
 	"net/http"
 )
 
 func (app *application) routes() http.Handler {
-	router := httprouter.New()
+	router := chi.NewRouter()
 
-	router.NotFound = http.HandlerFunc(app.notFoundResponse)
-	router.MethodNotAllowed = http.HandlerFunc(app.methodNotAllowedResponse)
+	// Middleware
+	router.Use(app.recoverPanic, app.rateLimit)
+
+	router.NotFound(app.notFoundResponse)
+	router.MethodNotAllowed(app.methodNotAllowedResponse)
 
 	// Health Check Routes
-	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.healthcheckHandler)
+	router.Route("/v1/healthcheck", app.loadHealthCheckRoutes)
 
 	// User Routes
-	router.HandlerFunc(http.MethodPost, "/v1/users", app.registerUserHandler)
+	router.Route("/v1/users", app.loadUserRoutes)
 
-	return app.recoverPanic(app.rateLimit(router))
+	return router
+}
+
+func (app *application) loadHealthCheckRoutes(router chi.Router) {
+	router.Get("/", app.healthcheckHandler)
+}
+
+func (app *application) loadUserRoutes(router chi.Router) {
+	router.Post("/", app.registerUserHandler)
 }
