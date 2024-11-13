@@ -119,7 +119,7 @@ func (app *application) readString(qs url.Values, key string, defaultValue strin
 	return s
 }
 
-// readCSV returns a list of strings from the query parameters
+// readCSV returns an array of strings based on the query seperated by commas. i.e. ?value=1,2,3 returns [1,2,3]
 func (app *application) readCSV(qs url.Values, key string, defaultValue []string) []string {
 	csv := qs.Get(key)
 	if csv == "" {

@@ -5,9 +5,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/hunttraitor/dialed-in-backend/internal/assert"
+	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -212,6 +214,133 @@ func TestReadJSON(t *testing.T) {
 			} else {
 				assert.Equal(t, dst.Name, "John Doe")
 				assert.Equal(t, dst.Age, 30)
+			}
+		})
+	}
+}
+
+func TestReadString(t *testing.T) {
+	app := new(application)
+
+	var mockQueryString = url.Values{}
+	mockQueryString.Add("name", "John Doe")
+	mockQueryString.Add("age", "30")
+
+	tests := []struct {
+		name           string
+		qs             url.Values
+		key            string
+		defaultValue   string
+		expectedResult string
+	}{
+		{
+			name:           "Find query param successfully",
+			qs:             mockQueryString,
+			key:            "age",
+			defaultValue:   "0",
+			expectedResult: "30",
+		},
+		{
+			name:           "Cannot find query parameter",
+			qs:             mockQueryString,
+			key:            "unknown",
+			defaultValue:   "0",
+			expectedResult: "0",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := app.readString(test.qs, test.key, test.defaultValue)
+			assert.Equal(t, test.expectedResult, result)
+		})
+	}
+}
+
+func TestReadCSV(t *testing.T) {
+	app := new(application)
+
+	mockQueryString := url.Values{}
+	mockQueryString.Add("anime", "HunterXHunter,OnePiece,SteinsGate")
+
+	tests := []struct {
+		name           string
+		qs             url.Values
+		key            string
+		defaultValue   []string
+		expectedResult []string
+	}{
+		{
+			name:           "Correctly separates all comma values",
+			qs:             mockQueryString,
+			key:            "anime",
+			defaultValue:   []string{},
+			expectedResult: []string{"HunterXHunter", "OnePiece", "SteinsGate"},
+		},
+		{
+			name:           "Cannot find key in query",
+			qs:             mockQueryString,
+			key:            "unknown",
+			defaultValue:   []string{},
+			expectedResult: []string{},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := app.readCSV(test.qs, test.key, test.defaultValue)
+			assert.Equal(t, len(test.expectedResult), len(result))
+			for i := range test.expectedResult {
+				assert.Equal(t, test.expectedResult[i], result[i])
+			}
+		})
+	}
+}
+
+func TestReadInt(t *testing.T) {
+	app := new(application)
+	mockQueryString := url.Values{}
+	mockQueryString.Add("name", "John Doe")
+	mockQueryString.Add("age", "20")
+
+	tests := []struct {
+		name           string
+		qs             url.Values
+		key            string
+		defaultValue   int
+		expectedResult int
+		expectedErr    string
+	}{
+		{
+			name:           "Correct age returned",
+			qs:             mockQueryString,
+			key:            "age",
+			defaultValue:   0,
+			expectedResult: 20,
+			expectedErr:    "",
+		},
+		{
+			name:           "Key is not an integer",
+			qs:             mockQueryString,
+			key:            "name",
+			defaultValue:   0,
+			expectedResult: 0,
+			expectedErr:    "must be an integer",
+		},
+		{
+			name:           "Key is not found",
+			qs:             mockQueryString,
+			key:            "unknown",
+			defaultValue:   0,
+			expectedResult: 0,
+			expectedErr:    "",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			v := validator.New()
+			result := app.readInt(test.qs, test.key, test.defaultValue, v)
+			assert.Equal(t, test.expectedResult, result)
+			if v.Errors != nil && len(v.Errors) > 0 {
+				assert.Equal(t, v.Errors["name"], test.expectedErr)
 			}
 		})
 	}
