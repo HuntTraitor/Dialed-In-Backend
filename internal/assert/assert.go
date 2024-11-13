@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// Equal checks if two values are equal to each other
+// Equal checks if two values are equal to each other (expected, actual)
 func Equal[T comparable](t *testing.T, expected, actual T) {
 	t.Helper()
 

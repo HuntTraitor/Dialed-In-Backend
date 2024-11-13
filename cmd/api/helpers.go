@@ -45,6 +45,7 @@ func (app *application) writeJSON(w http.ResponseWriter, status int, data any, h
 	return nil
 }
 
+// readJSON reads and decodes data from the body and writes it to a dst
 func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 	// Ensure max limit to how much json a user can send
 	maxBytes := 1_048_576
@@ -63,7 +64,7 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any
 		var maxBytesError *http.MaxBytesError
 
 		switch {
-		// Example: { "name": "John Doe", "age": 30, }
+		// Example: {"name": John Doe, "age": 30}
 		case errors.As(err, &syntaxError):
 			return fmt.Errorf("body contains badly-formed JSON (at character %d)", syntaxError.Offset)
 
@@ -89,7 +90,7 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any
 
 			// Example: {"large_data": "..."}
 		case errors.As(err, &maxBytesError):
-			return fmt.Errorf("body must be larger than %d bytes", maxBytesError.Limit)
+			return fmt.Errorf("body must not be larger than %d bytes", maxBytesError.Limit)
 
 		case errors.As(err, &invalidUnmarshalFieldError):
 			panic(err)

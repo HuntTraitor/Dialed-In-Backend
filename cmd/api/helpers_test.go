@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"github.com/hunttraitor/dialed-in-backend/internal/assert"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -128,6 +131,87 @@ func TestWriteJSON(t *testing.T) {
 					}
 				}
 				assert.StringContains(t, rr.Body.String(), mockData.Message)
+			}
+		})
+	}
+}
+
+func TestReadJSON(t *testing.T) {
+	app := new(application)
+
+	type mockDestination struct {
+		Name string `json:"name"`
+		Age  int    `json:"age"`
+	}
+
+	mockName := "John Doe"
+	mockAge := 30
+
+	tests := []struct {
+		name        string
+		jsonBody    string
+		expectedErr string
+	}{
+		{
+			name:        "Successfully decodes json",
+			jsonBody:    fmt.Sprintf(`{"name": "%s", "age": %d}`, mockName, mockAge),
+			expectedErr: "",
+		},
+		{
+			name:        "Badly Formed json at character",
+			jsonBody:    `{"name": John Doe, "age": 30}`,
+			expectedErr: "body contains badly-formed JSON (at character 10)",
+		},
+		{
+			name:        "Badly formed json",
+			jsonBody:    `{ "name": "John Doe"`,
+			expectedErr: "body contains badly-formed JSON",
+		},
+		{
+			name:        "Body contains incorrect JSON type for field",
+			jsonBody:    `{ "name": "John Doe", "age": "thirty" }`,
+			expectedErr: `body contains incorrect JSON type for field "age"`,
+		},
+		{
+			name:        "Body contains incorrect JSON type for character",
+			jsonBody:    `["unexpected_array"]`,
+			expectedErr: `body contains incorrect JSON type (at character 1)`,
+		},
+		{
+			name:        "Body must not be empty",
+			jsonBody:    "",
+			expectedErr: "body must not be empty",
+		},
+		{
+			name:        "Unknown Field",
+			jsonBody:    `{"name": "John", "unknown_field": "unexpected"}`,
+			expectedErr: `body contains unknown key "unknown_field"`,
+		},
+		{
+			name:        "Data too large",
+			jsonBody:    `{"name": "` + strings.Repeat("A", 1_048_577) + `"}`,
+			expectedErr: `body must not be larger than 1048576 bytes`,
+		},
+		{
+			name:        "Multiple json values",
+			jsonBody:    `{"name": "John Doe", "age": 30}{"name": "John Doe", "age": 30}`,
+			expectedErr: "body must only contain a single JSON value",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(test.jsonBody))
+			w := httptest.NewRecorder()
+
+			var dst mockDestination
+			err := app.readJSON(w, r, &dst)
+
+			if err != nil {
+				assert.Equal(t, test.expectedErr, err.Error())
+			} else {
+				assert.Equal(t, dst.Name, "John Doe")
+				assert.Equal(t, dst.Age, 30)
 			}
 		})
 	}
