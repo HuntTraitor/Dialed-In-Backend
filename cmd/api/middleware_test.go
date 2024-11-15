@@ -9,8 +9,8 @@ import (
 )
 
 func TestRecoverPanic(t *testing.T) {
-	app := newTestApplication(t)
-	ts := newTestServer(t, app.routes())
+	app := newTestApplication()
+	ts := newTestServer(app.routes())
 	defer ts.Close()
 
 	expectedValue := "close"
@@ -43,12 +43,12 @@ func TestRateLimit(t *testing.T) {
 	}
 
 	// Creating a new app with a configured limiter
-	app := newTestApplication(t)
+	app := newTestApplication()
 	app.config.limiter.enabled = true
 	app.config.limiter.rps = 1
 	app.config.limiter.burst = 1
 	app.config.limiter.expiration = expiration
-	ts := newTestServer(t, app.routes())
+	ts := newTestServer(app.routes())
 	defer ts.Close()
 
 	// Creating a handler on the app

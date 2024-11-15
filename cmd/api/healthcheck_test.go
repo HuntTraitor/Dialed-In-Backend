@@ -9,8 +9,8 @@ import (
 )
 
 func TestHealthCheck(t *testing.T) {
-	app := newTestApplication(t)
-	ts := newTestServer(t, app.routes())
+	app := newTestApplication()
+	ts := newTestServer(app.routes())
 	defer ts.Close()
 
 	code, _, body := ts.get(t, "/v1/healthcheck")
