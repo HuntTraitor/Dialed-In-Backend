@@ -19,4 +19,4 @@ reset:
 	@GOOSE_DRIVER=postgres GOOSE_DBSTRING=$(DATABASE_URL) goose -dir="db/migrations" reset
 
 test:
-	@go test -v ./cmd/api
+	@go test -v ./...
