@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"testing"
+
+	_ "github.com/lib/pq"
 )
 
 const (

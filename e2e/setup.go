@@ -1,7 +1,10 @@
 package e2e
 
 import (
+	"database/sql"
 	"fmt"
+	"github.com/joho/godotenv"
+	"github.com/pressly/goose/v3"
 	"math/rand"
 	"net"
 	"os"
@@ -17,8 +20,24 @@ const (
 
 // LaunchTestProgram launches the testing server from a built binary
 func LaunchTestProgram(port string) (cleanup func(), sendInterrupt func() error, err error) {
+
+	err = godotenv.Load("../.env")
+	if err != nil {
+		return nil, nil, err
+	}
+
 	binName, err := buildBinary()
 	if err != nil {
+		return nil, nil, err
+	}
+
+	db, err := sql.Open("postgres", os.Getenv("TEST_DATABASE_URL"))
+	if err != nil {
+		return nil, nil, err
+	}
+	defer db.Close()
+
+	if err := goose.Up(db, "../db/migrations"); err != nil {
 		return nil, nil, err
 	}
 
@@ -51,7 +70,7 @@ func runServer(binName string, port string) (sendInterrupt func() error, kill fu
 		os.Exit(1)
 	}
 
-	cmd := exec.Command(cmdPath, "-env=test", "-db-dsn=postgres://postgres:postgres@localhost:5432/test?sslmode=disable", "-port="+port)
+	cmd := exec.Command(cmdPath, "-env=test", "-db-dsn="+os.Getenv("TEST_DATABASE_URL"), "-port="+port)
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -85,7 +104,7 @@ func waitForServerListening(port string) error {
 	return fmt.Errorf("nothing seems to be listening on localhost:%s", port)
 }
 
-// buildBinary builds a binary with a randomString-basebinname
+// buildBinary builds a binary with a randomString-baseBinName
 func buildBinary() (string, error) {
 	binName := randomString(10) + "-" + baseBinName
 

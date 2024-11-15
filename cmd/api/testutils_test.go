@@ -72,7 +72,7 @@ func newTestDB(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
-	testDatabaseURL := os.Getenv("TEST_DB_URL")
+	testDatabaseURL := os.Getenv("TEST_DATABASE_URL")
 	db, err := sql.Open("postgres", testDatabaseURL)
 	if err != nil {
 		t.Fatal(err)
