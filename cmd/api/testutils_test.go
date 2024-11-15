@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"github.com/hunttraitor/dialed-in-backend/internal/mocks"
 	"io"
 	"log/slog"
 	"net/http"
@@ -20,6 +21,7 @@ func newTestApplication() *application {
 	return &application{
 		config: cfg,
 		logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		models: mocks.NewMockModels(),
 	}
 }
 

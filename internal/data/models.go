@@ -11,9 +11,18 @@ var (
 )
 
 type Models struct {
-	Users UserModel
+	Users UserModelInterface
 }
 
+type UserModel struct {
+	DB *sql.DB
+}
+
+type UserModelInterface interface {
+	Insert(user *User) error
+}
+
+// NewModels returns models associated with a real database
 func NewModels(db *sql.DB) Models {
 	return Models{
 		Users: UserModel{DB: db},

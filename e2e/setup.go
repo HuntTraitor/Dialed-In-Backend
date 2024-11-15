@@ -23,26 +23,31 @@ func LaunchTestProgram(port string) (cleanup func(), sendInterrupt func() error,
 
 	err = godotenv.Load("../.env")
 	if err != nil {
-		return nil, nil, err
+		fmt.Println("Error loading .env file:", err)
+		os.Exit(1)
 	}
 
 	binName, err := buildBinary()
 	if err != nil {
-		return nil, nil, err
+		fmt.Println("Failed to build binary:", err)
+		os.Exit(1)
 	}
 
 	db, err := sql.Open("postgres", os.Getenv("TEST_DATABASE_URL"))
 	if err != nil {
-		return nil, nil, err
+		fmt.Println("Failed to connect to postgres:", err)
+		os.Exit(1)
 	}
 	defer db.Close()
 
-	if err := goose.Down(db, "../db/migrations"); err != nil {
-		return nil, nil, err
+	if err := goose.Reset(db, "../db/migrations"); err != nil {
+		fmt.Println("Failed to down migrations:", err)
+		os.Exit(1)
 	}
 
 	if err := goose.Up(db, "../db/migrations"); err != nil {
-		return nil, nil, err
+		fmt.Println("Failed to up migrations:", err)
+		os.Exit(1)
 	}
 
 	sendInterrupt, kill, err := runServer(binName, port)
