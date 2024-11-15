@@ -37,6 +37,10 @@ func LaunchTestProgram(port string) (cleanup func(), sendInterrupt func() error,
 	}
 	defer db.Close()
 
+	if err := goose.Down(db, "../db/migrations"); err != nil {
+		return nil, nil, err
+	}
+
 	if err := goose.Up(db, "../db/migrations"); err != nil {
 		return nil, nil, err
 	}
