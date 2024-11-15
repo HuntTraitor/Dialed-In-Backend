@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"flag"
-	"fmt"
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"log/slog"
 	"os"
@@ -26,9 +25,10 @@ type config struct {
 	}
 
 	limiter struct {
-		rps     float64
-		burst   int
-		enabled bool
+		rps        float64
+		burst      int
+		enabled    bool
+		expiration time.Duration
 	}
 }
 
@@ -41,7 +41,6 @@ type application struct {
 func main() {
 	var cfg config
 	databaseURL := os.Getenv("DATABASE_URL")
-	fmt.Println(databaseURL)
 
 	// Setting flags for all the different configurations
 	flag.IntVar(&cfg.port, "port", 3000, "API server port")
@@ -53,6 +52,7 @@ func main() {
 	flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate limiter maximum requests per second")
 	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
 	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
+	flag.DurationVar(&cfg.limiter.expiration, "limiter-expiration", 3*time.Minute, "Set limiter expiration")
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))

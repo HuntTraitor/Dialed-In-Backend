@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/hunttraitor/dialed-in-backend/internal/assert"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"github.com/julienschmidt/httprouter"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -132,7 +132,7 @@ func TestWriteJSON(t *testing.T) {
 						assert.Equal(t, rr.Header().Get(key), value)
 					}
 				}
-				assert.StringContains(t, rr.Body.String(), mockData.Message)
+				assert.Contains(t, rr.Body.String(), mockData.Message)
 			}
 		})
 	}

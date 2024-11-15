@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"database/sql"
-	"fmt"
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"github.com/joho/godotenv"
 	"io"
@@ -23,7 +22,11 @@ func newTestApplication(t *testing.T) *application {
 	testDB := newTestDB(t)
 	testModels := data.NewModels(testDB)
 
+	var cfg config
+	cfg.env = "test"
+
 	return &application{
+		config: cfg,
 		logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 		models: testModels,
 	}
@@ -49,7 +52,7 @@ func (ts *testServer) get(t *testing.T, urlPath string) (int, http.Header, strin
 	return rs.StatusCode, rs.Header, string(body)
 }
 
-func (ts *testServer) post(t *testing.T, urlPath string, headers http.Header, body io.Reader) (int, http.Header, string) {
+func (ts *testServer) post(t *testing.T, urlPath string, body io.Reader) (int, http.Header, string) {
 	rs, err := ts.Client().Post(ts.URL+urlPath, "application/json", body)
 	if err != nil {
 		t.Fatal(err)
@@ -70,14 +73,12 @@ func newTestDB(t *testing.T) *sql.DB {
 		t.Fatal(err)
 	}
 	testDatabaseURL := os.Getenv("TEST_DB_URL")
-	fmt.Println(testDatabaseURL)
 	db, err := sql.Open("postgres", testDatabaseURL)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	script, err := os.ReadFile("../../db/sql/test_setup.sql")
-	fmt.Println(string(script))
 	if err != nil {
 		t.Fatal(err)
 	}
