@@ -38,14 +38,9 @@ func LaunchTestProgram(port string) (cleanup func(), sendInterrupt func() error,
 		fmt.Println("Failed to connect to postgres:", err)
 		os.Exit(1)
 	}
-	defer db.Close()
-
-	if err := goose.Reset(db, "../db/migrations"); err != nil {
-		fmt.Println("Failed to down migrations:", err)
-		os.Exit(1)
-	}
 
 	if err := goose.Up(db, "../db/migrations"); err != nil {
+		db.Close()
 		fmt.Println("Failed to up migrations:", err)
 		os.Exit(1)
 	}
@@ -56,6 +51,10 @@ func LaunchTestProgram(port string) (cleanup func(), sendInterrupt func() error,
 		if kill != nil {
 			kill()
 		}
+		if resetErr := goose.Reset(db, "../db/migrations"); resetErr != nil {
+			fmt.Println("Failed to reset migrations during cleanup:", resetErr)
+		}
+		db.Close()
 		os.Remove(binName)
 	}
 	if err != nil {
