@@ -19,6 +19,17 @@ jobs:
       with:
         go-version: 1.22.4
 
+    - name: Setup .env file
+      run: |
+        echo DATABASE_HOST={{ vars.DATABASE_HOST }} >> .env
+        echo DATABASE_DRIVER={{ vars.DATABASE_DRIVER }} >> .env
+        echo POSTGRES_USER={{ vars.POSTGRES_USER }} >> .env
+        echo POSTGRES_PASSWORD={{ secrets.POSTGRES_PASSWORD }} >> .env
+        echo POSTGRES_DB={{ vars.POSTGRES_DB }} >> .env
+        echo POSTGRES_PORT={{ vars.POSTGRES_PORT }} >> .env
+        echo DATABASE_URL={{ secrets.DATABASE_URL }} >> .env
+        echo TEST_DATABASE_URL={{ secrets.TEST_DATABASE_URL }} >> .env
+
     - name: Build Docker image
       run: docker compose build
 
