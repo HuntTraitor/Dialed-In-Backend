@@ -39,6 +39,7 @@ func LaunchTestProgram(port string) (cleanup func(), sendInterrupt func() error,
 		os.Exit(1)
 	}
 
+	fmt.Println(os.Getenv("TEST_DATABASE_URL"))
 	if err := goose.Up(db, "../db/migrations"); err != nil {
 		db.Close()
 		fmt.Println("Failed to up migrations:", err)
