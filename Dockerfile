@@ -8,11 +8,9 @@ LABEL maintainer="Hunter Tratar"
 RUN mkdir /app
 WORKDIR /app
 
-# Download all the dependencies
-RUN go get -d -v ./...
+COPY go.mod go.sum ./
 
-# Install the package
-RUN go install -v ./...
+RUN go mod download
 
 #Setup hot-reload for dev stage
 RUN go install -mod=mod github.com/githubnemo/CompileDaemon
