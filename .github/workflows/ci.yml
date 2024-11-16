@@ -1,0 +1,32 @@
+name: Dialed-In-Backend-CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.22.4
+
+    - name: Build Docker image
+      run: docker compose build
+
+    - name: Run Docker Compose
+      run: docker compose up -d
+
+    - name: Run Tests
+      run: make test-all
+
+    - name: Health Check Server
+      run: curl -X GET http://localhost:3000/v1/healthcheck | grep "available" 
