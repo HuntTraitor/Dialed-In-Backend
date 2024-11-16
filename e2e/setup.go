@@ -33,14 +33,16 @@ func LaunchTestProgram(port string) (cleanup func(), sendInterrupt func() error,
 		os.Exit(1)
 	}
 
+	fmt.Println(os.Getenv("TEST_DATABASE_URL"))
 	db, err := sql.Open("postgres", os.Getenv("TEST_DATABASE_URL"))
 	if err != nil {
 		fmt.Println("Failed to connect to postgres:", err)
 		os.Exit(1)
 	}
 
-	fmt.Println(os.Getenv("TEST_DATABASE_URL"))
 	if err := goose.Up(db, "../db/migrations"); err != nil {
+		fmt.Println("DEBUGGING>>>>>")
+		fmt.Println(os.Getenv("TEST_DATABASE_URL"))
 		db.Close()
 		fmt.Println("Failed to up migrations:", err)
 		os.Exit(1)
