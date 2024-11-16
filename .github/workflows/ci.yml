@@ -7,18 +7,19 @@ on:
     branches: [ main ]
 
 env:
-  DATABASE_HOST: ${{ vars.DATABASE_HOST }}
   DATABASE_DRIVER: ${{ vars.DATABASE_DRIVER }}
+  DATABASE_HOST: ${{ vars.DATABASE_HOST }}
   POSTGRES_USER: ${{ vars.POSTGRES_USER }}
-  POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
   POSTGRES_DB: ${{ vars.POSTGRES_DB }}
   POSTGRES_PORT: ${{ vars.POSTGRES_PORT }}
+  POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
   DATABASE_URL: ${{ secrets.DATABASE_URL }}
   TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: Dialed-In-Backend-CI
 
     steps:
     - name: Checkout code
@@ -29,22 +30,31 @@ jobs:
       with:
         go-version: 1.22.4
 
-    - name: Setup .env file
+    - name: Setup and export .env file
       run: |
-        echo DATABASE_HOST=${{ vars.DATABASE_HOST }} >> .env
         echo DATABASE_DRIVER=${{ vars.DATABASE_DRIVER }} >> .env
+        echo DATABASE_HOST=${{ vars.DATABASE_HOST }} >> .env
         echo POSTGRES_USER=${{ vars.POSTGRES_USER }} >> .env
         echo POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} >> .env
         echo POSTGRES_DB=${{ vars.POSTGRES_DB }} >> .env
         echo POSTGRES_PORT=${{ vars.POSTGRES_PORT }} >> .env
         echo DATABASE_URL=${{ secrets.DATABASE_URL }} >> .env
         echo TEST_DATABASE_URL=${{ secrets.TEST_DATABASE_URL }} >> .env
+        set -a
+        source .env
+        set +a
+
+    - name: Debug .env
+      run: cat .env
+
+    - name: Debug Environment Variables
+      run: printenv | grep -E 'DATABASE|POSTGRES'
 
     - name: Build Docker image
-      run: docker compose build
+      run: docker compose --env-file .env build
 
     - name: Run Docker Compose
-      run: docker compose up -d
+      run: docker compose --env-file .env up -d
 
     - name: Sleep for 20 seconds
       run: sleep 20s
@@ -53,4 +63,4 @@ jobs:
       run: make test-all
 
     - name: Health Check Server
-      run: curl -X GET http://localhost:3000/v1/healthcheck | grep "available" 
+      run: curl -X GET http://localhost:3000/v1/healthcheck | grep "available"
