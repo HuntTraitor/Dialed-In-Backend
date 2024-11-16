@@ -44,12 +44,6 @@ jobs:
         source .env
         set +a
 
-    - name: Debug .env
-      run: cat .env
-
-    - name: Debug Environment Variables
-      run: printenv | grep -E 'DATABASE|POSTGRES'
-
     - name: Build Docker image
       run: docker compose --env-file .env build
 
