@@ -42,8 +42,8 @@ jobs:
         echo POSTGRES_PORT=${{ vars.POSTGRES_PORT }} >> .env
         echo DATABASE_URL=${{ secrets.DATABASE_URL }} >> .env
         echo TEST_DATABASE_URL=${{ secrets.TEST_DATABASE_URL }} >> .env
-        echo SMTP_USERNAME: ${{ vars.SMTP_USERNAME }} >> .env
-        echo SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }} >> .env
+        echo SMTP_USERNAME=${{ vars.SMTP_USERNAME }} >> .env
+        echo SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }} >> .env
         set -a
         source .env
         set +a
