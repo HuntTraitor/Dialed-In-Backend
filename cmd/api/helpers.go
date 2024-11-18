@@ -141,3 +141,16 @@ func (app *application) readInt(qs url.Values, key string, defaultValue int, v *
 	}
 	return i
 }
+
+// background spins up a job to in a new goroutine with proper panic recovery
+func (app *application) background(fn func()) {
+	go func() {
+		defer app.wg.Add(1)
+		defer func() {
+			if err := recover(); err != nil {
+				app.logger.Error(fmt.Sprintf("%v", err))
+			}
+		}()
+		fn()
+	}()
+}

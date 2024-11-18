@@ -25,6 +25,7 @@ func (app *application) serve() error {
 	shutdownError := make(chan error)
 
 	// When there is a quit signal, delay 30 seconds to let any requests finish up before shutting down
+	// Also wait for any background tasks to complete
 	go func() {
 		quit := make(chan os.Signal, 1)
 		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -32,7 +33,16 @@ func (app *application) serve() error {
 		app.logger.Info("caught signal", "signal", s.String())
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		shutdownError <- srv.Shutdown(ctx)
+
+		err := srv.Shutdown(ctx)
+		if err != nil {
+			shutdownError <- err
+		}
+
+		app.logger.Info("completing background tasks", "addr", srv.Addr)
+
+		app.wg.Wait()
+		shutdownError <- nil
 	}()
 
 	app.logger.Info("starting server", "addr", srv.Addr, "env", app.config.env)

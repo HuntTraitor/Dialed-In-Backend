@@ -119,8 +119,19 @@ func TestCreateUser(t *testing.T) {
 					assert.NotEmpty(t, v)
 				default:
 					assert.Equal(t, expectedContent[k], v)
-					_, count := getEmail(t, "containing", "Welcome")
-					assert.GreaterOrEqual(t, count, 1)
+
+					// wait for emails to be sent
+					var receivedCount int
+					waitFor(t, func() bool {
+						_, count := getEmail(t, "containing", "Welcome")
+						if count >= 1 {
+							receivedCount = count
+							return true
+						}
+						return false
+					})
+
+					assert.GreaterOrEqual(t, receivedCount, 1)
 				}
 			}
 		})

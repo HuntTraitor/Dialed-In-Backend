@@ -54,12 +54,14 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Send welcome email
-	err = app.mailer.Send(user.Email, "user_welcome.tmpl", user)
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-		return
-	}
+	// Send welcome email in the background
+	app.background(func() {
+		err = app.mailer.Send(user.Email, "user_welcome.tmpl", user)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+	})
 
 	// Write the returned json back to the client
 	err = app.writeJSON(w, http.StatusCreated, envelope{"user": user}, nil)

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"testing"
+	"time"
 )
 
 // post takes an url and body and returns a status code, headers, and a json body
@@ -58,4 +59,24 @@ func getEmail(t *testing.T, kind string, query string) (string, int) {
 	count := int(data["count"].(float64))
 
 	return string(body), count
+}
+
+// waitFor waits 5 seconds for a condition to be true
+// Use this for asynchronous background tasks
+func waitFor(t *testing.T, condition func() bool) {
+	t.Helper()
+	timeout := time.After(5 * time.Second)
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timeout:
+			t.Fatalf("timed out waiting for values to equal each other")
+		case <-ticker.C:
+			if condition() {
+				return
+			}
+		}
+	}
 }

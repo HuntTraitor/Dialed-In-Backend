@@ -8,6 +8,7 @@ import (
 	"github.com/hunttraitor/dialed-in-backend/internal/mailer"
 	"log/slog"
 	"os"
+	"sync"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -46,6 +47,7 @@ type application struct {
 	logger *slog.Logger
 	models data.Models
 	mailer Mailer
+	wg     sync.WaitGroup
 }
 
 type Mailer interface {
