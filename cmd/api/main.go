@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"flag"
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
+	"github.com/hunttraitor/dialed-in-backend/internal/mailer"
 	"log/slog"
 	"os"
 	"time"
@@ -30,17 +31,32 @@ type config struct {
 		enabled    bool
 		expiration time.Duration
 	}
+
+	smtp struct {
+		host     string
+		port     int
+		username string
+		password string
+		sender   string
+	}
 }
 
 type application struct {
 	config config
 	logger *slog.Logger
 	models data.Models
+	mailer Mailer
+}
+
+type Mailer interface {
+	Send(recipient, templateFile string, data any) error
 }
 
 func main() {
 	var cfg config
 	databaseURL := os.Getenv("DATABASE_URL")
+	SMTPUsername := os.Getenv("SMTP_USERNAME")
+	SMTPPassword := os.Getenv("SMTP_PASSWORD")
 
 	// Setting flags for all the different configurations
 	flag.IntVar(&cfg.port, "port", 3000, "API server port")
@@ -53,6 +69,11 @@ func main() {
 	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
 	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
 	flag.DurationVar(&cfg.limiter.expiration, "limiter-expiration", 3*time.Minute, "Set limiter expiration")
+	flag.StringVar(&cfg.smtp.host, "smtp-host", "sandbox.smtp.mailtrap.io", "SMTP host")
+	flag.IntVar(&cfg.smtp.port, "smtp-port", 2525, "SMTP port")
+	flag.StringVar(&cfg.smtp.username, "smtp-username", SMTPUsername, "SMTP username")
+	flag.StringVar(&cfg.smtp.password, "smtp-password", SMTPPassword, "SMTP password")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Dialed-In <no-reply@dialedin.com>", "SMTP sender")
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -71,6 +92,7 @@ func main() {
 		config: cfg,
 		logger: logger,
 		models: data.NewModels(db),
+		mailer: mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
 	}
 
 	err = app.serve()

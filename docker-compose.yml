@@ -9,6 +9,8 @@ services:
       - POSTGRES_PORT=${POSTGRES_PORT}
       - DATABASE_URL=${DATABASE_URL}
       - TEST_DATABASE_URL=${TEST_DATABASE_URL}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
     tty: true
     build: .
     ports:

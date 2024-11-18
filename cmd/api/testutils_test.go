@@ -22,6 +22,7 @@ func newTestApplication() *application {
 		config: cfg,
 		logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 		models: mocks.NewMockModels(),
+		mailer: mocks.MockMailer{},
 	}
 }
 
