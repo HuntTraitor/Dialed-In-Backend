@@ -12,8 +12,12 @@ import (
 var templateFS embed.FS
 
 type Mailer struct {
-	dialer *mail.Dialer
+	dialer Dialer
 	sender string
+}
+
+type Dialer interface {
+	DialAndSend(msg ...*mail.Message) error
 }
 
 // New creates a new mailer

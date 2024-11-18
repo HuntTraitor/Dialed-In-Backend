@@ -1,7 +1,14 @@
 package mocks
 
-type MockMailer struct{}
+type MockMailer struct {
+	SendCalledCount int
+}
 
-func (m MockMailer) Send(email, template string, data interface{}) error {
+func NewMockMailer() *MockMailer {
+	return &MockMailer{}
+}
+
+func (m *MockMailer) Send(email, template string, data interface{}) error {
+	m.SendCalledCount++
 	return nil
 }

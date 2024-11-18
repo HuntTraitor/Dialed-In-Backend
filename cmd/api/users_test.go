@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/hunttraitor/dialed-in-backend/internal/mocks"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"strings"
@@ -95,6 +96,8 @@ func TestCreateUser(t *testing.T) {
 					assert.NotEmpty(t, v)
 				default:
 					assert.Equal(t, expectedContent[k], v)
+					// Check that an email has been sent
+					assert.Equal(t, 1, app.mailer.(*mocks.MockMailer).SendCalledCount)
 				}
 			}
 		})

@@ -78,7 +78,16 @@ func runServer(binName string, port string) (sendInterrupt func() error, kill fu
 		os.Exit(1)
 	}
 
-	cmd := exec.Command(cmdPath, "-env=test", "-db-dsn="+os.Getenv("TEST_DATABASE_URL"), "-port="+port)
+	cmd := exec.Command(
+		cmdPath,
+		"-env=test",
+		"-db-dsn="+os.Getenv("TEST_DATABASE_URL"),
+		"-port="+port,
+		"-smtp-host=localhost",
+		"-smtp-port=1025",
+		"-smtp-username="+"",
+		"-smtp-password="+"",
+	)
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
