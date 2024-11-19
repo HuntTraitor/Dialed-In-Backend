@@ -5,6 +5,14 @@ Hello!
 
 Thanks for signing up, we hope to serve as a general guideline on how you can better experience your morning cup of coffee!
 
+Please send a request to the `PUT /v1/users/activated` endpoint with the following JSON body to activate your account:
+
+{"token": "{{.activationToken}}"}
+
+Please note that this is a one time use token and will expire in 3 days
+
+Thank you!
+
 The Dialed-In Team
 {{end}}
 
@@ -19,6 +27,12 @@ The Dialed-In Team
     <body>
         <p>Hello!</p>
         <p>Thanks for signing up, we hope to serve as a general guideline on how you can better experience your morning cup of coffee!</p>
+        <p>Please send a request to the `PUT /v1/users/activated` endpoint with the following JSON body to activate your account:</p>
+        <pre><code>
+        {"token": "{{.activationToken}}"}
+        </code></pre>
+        <p>Please note that this is a one time use token and will expire in 3 days</p>
+        <p>Thank you!<p/>
         <p>The Dialed-In Team</p>
     </body>
 </html>

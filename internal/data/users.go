@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"golang.org/x/crypto/bcrypt"
@@ -25,6 +26,14 @@ type User struct {
 type password struct {
 	plaintext *string
 	hash      []byte
+}
+
+type UserModel struct {
+	DB *sql.DB
+}
+
+type UserModelInterface interface {
+	Insert(user *User) error
 }
 
 // Set sets the hash of the encrypted password
