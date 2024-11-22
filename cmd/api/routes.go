@@ -29,4 +29,5 @@ func (app *application) loadHealthCheckRoutes(router chi.Router) {
 
 func (app *application) loadUserRoutes(router chi.Router) {
 	router.Post("/", app.registerUserHandler)
+	router.Put("/activated", app.activateUserHandler)
 }

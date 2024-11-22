@@ -104,3 +104,22 @@ func TestCreateUser(t *testing.T) {
 		})
 	}
 }
+
+//func TestActivateUser(t *testing.T) {
+//	app := newTestApplication()
+//	ts := newTestServer(app.routes())
+//	defer ts.Close()
+//
+//	tests := []struct {
+//		name               string
+//		payload            string
+//		expectedStatusCode int
+//		expectedWrapper    string
+//		expectedResponse   map[string]any
+//	}{
+//		{
+//			name: "Successfully activate user",
+//			payload: `{"token": `
+//		},
+//	}
+//}

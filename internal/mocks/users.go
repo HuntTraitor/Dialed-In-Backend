@@ -18,3 +18,18 @@ func (m MockUserModel) Insert(user *data.User) error {
 		return nil
 	}
 }
+
+func (m MockUserModel) Update(user *data.User) error {
+	// TODO test update
+	return nil
+}
+
+func (m MockUserModel) GetForToken(tokenScope, tokenPlainText string) (*data.User, error) {
+	// TODO test GetForToken
+	return nil, nil
+}
+
+func (m MockUserModel) GetByEmail(email string) (*data.User, error) {
+	// TODO test getbyemail
+	return nil, nil
+}

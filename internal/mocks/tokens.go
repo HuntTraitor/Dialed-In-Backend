@@ -20,3 +20,8 @@ func (m *MockTokenModel) Insert(token *data.Token) error {
 	m.TokenCreated++
 	return nil
 }
+
+func (m *MockTokenModel) DeleteAllForUser(scope string, userID int64) error {
+	// TODO test DeleteAllForUser
+	return nil
+}

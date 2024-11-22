@@ -29,9 +29,10 @@ type TokenModel struct {
 type TokenModelInterface interface {
 	New(userID int64, ttl time.Duration, scope string) (*Token, error)
 	Insert(token *Token) error
+	DeleteAllForUser(scope string, userID int64) error
 }
 
-// generateToken generates a
+// generateToken generates a token from a user id with an expiry and scope
 func generateToken(userID int64, ttl time.Duration, scope string) (*Token, error) {
 	token := &Token{
 		UserID: userID,
@@ -56,11 +57,12 @@ func generateToken(userID int64, ttl time.Duration, scope string) (*Token, error
 
 }
 
-func ValidatePlainText(v *validator.Validator, tokenPlainText string) {
+func ValidateTokenPlainText(v *validator.Validator, tokenPlainText string) {
 	v.Check(tokenPlainText != "", "token", "must be provided")
 	v.Check(len(tokenPlainText) == 26, "token", "must be 26 bytes long")
 }
 
+// New generates a new token based on a userID
 func (m TokenModel) New(userID int64, ttl time.Duration, scope string) (*Token, error) {
 	token, err := generateToken(userID, ttl, scope)
 	if err != nil {
@@ -70,6 +72,7 @@ func (m TokenModel) New(userID int64, ttl time.Duration, scope string) (*Token, 
 	return token, err
 }
 
+// Insert inserts a new token into the database
 func (m TokenModel) Insert(token *Token) error {
 	query := `INSERT INTO tokens (hash, user_id, expiry, scope) VALUES ($1, $2, $3, $4)`
 	args := []any{token.Hash, token.UserID, token.Expiry, token.Scope}
@@ -81,6 +84,7 @@ func (m TokenModel) Insert(token *Token) error {
 	return err
 }
 
+// DeleteAllForUser deletes all tokens for a user
 func (m TokenModel) DeleteAllForUser(scope string, userID int64) error {
 	query := `DELETE FROM tokens WHERE scope=$1 AND user_id=$2`
 
