@@ -32,6 +32,7 @@ func newTestServer(h http.Handler) *testServer {
 }
 
 func (ts *testServer) get(t *testing.T, urlPath string) (int, http.Header, string) {
+	t.Helper()
 	rs, err := ts.Client().Get(ts.URL + urlPath)
 	if err != nil {
 		t.Fatal(err)
@@ -47,6 +48,7 @@ func (ts *testServer) get(t *testing.T, urlPath string) (int, http.Header, strin
 }
 
 func (ts *testServer) post(t *testing.T, urlPath string, body io.Reader) (int, http.Header, string) {
+	t.Helper()
 	rs, err := ts.Client().Post(ts.URL+urlPath, "application/json", body)
 	if err != nil {
 		t.Fatal(err)
@@ -58,5 +60,33 @@ func (ts *testServer) post(t *testing.T, urlPath string, body io.Reader) (int, h
 		t.Fatal(err)
 	}
 	returnedBody = bytes.TrimSpace(returnedBody)
+	return rs.StatusCode, rs.Header, string(returnedBody)
+}
+
+func (ts *testServer) put(t *testing.T, urlPath string, body io.Reader) (int, http.Header, string) {
+	t.Helper()
+
+	// Create a PUT request
+	req, err := http.NewRequest(http.MethodPut, ts.URL+urlPath, body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	// Perform the request
+	rs, err := ts.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rs.Body.Close()
+
+	// Read the response body
+	returnedBody, err := io.ReadAll(rs.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	returnedBody = bytes.TrimSpace(returnedBody)
+
+	// Return the response details
 	return rs.StatusCode, rs.Header, string(returnedBody)
 }

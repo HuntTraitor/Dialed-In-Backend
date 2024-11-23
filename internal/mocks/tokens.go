@@ -22,6 +22,5 @@ func (m *MockTokenModel) Insert(token *data.Token) error {
 }
 
 func (m *MockTokenModel) DeleteAllForUser(scope string, userID int64) error {
-	// TODO test DeleteAllForUser
 	return nil
 }
