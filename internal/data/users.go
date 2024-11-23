@@ -185,7 +185,6 @@ func (m UserModel) Update(user *User) error {
 
 // GetForToken gets a user by their associated token
 func (m UserModel) GetForToken(tokenScope, tokenPlainText string) (*User, error) {
-	// TODO test GetForToken
 	tokenHash := sha256.Sum256([]byte(tokenPlainText))
 
 	query := `
@@ -197,7 +196,7 @@ func (m UserModel) GetForToken(tokenScope, tokenPlainText string) (*User, error)
 		AND tokens.expiry > $3
 	`
 
-	args := []any{tokenHash[:], tokenScope, time.Now()}
+	args := []any{tokenHash[:], tokenScope, time.Now().UTC()}
 
 	var user User
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

@@ -36,7 +36,7 @@ type TokenModelInterface interface {
 func generateToken(userID int64, ttl time.Duration, scope string) (*Token, error) {
 	token := &Token{
 		UserID: userID,
-		Expiry: time.Now().Add(ttl),
+		Expiry: time.Now().UTC().Add(ttl),
 		Scope:  scope,
 	}
 	randomBytes := make([]byte, 16)

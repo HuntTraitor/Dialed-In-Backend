@@ -250,7 +250,7 @@ func TestGetForToken(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			user, err := m.GetForToken(tt.inputToken, tt.inputScope)
+			user, err := m.GetForToken(tt.inputScope, tt.inputToken)
 			assert.Equal(t, tt.expectedErr, err)
 			if err == nil {
 				assert.Equal(t, tt.expectedUser, user)
@@ -258,6 +258,14 @@ func TestGetForToken(t *testing.T) {
 		})
 	}
 
-	// TODO test a expired token too
-
+	t.Run("Return ErrRecordNotFound when token is expired", func(t *testing.T) {
+		// Set token to expire 1 hour in the past
+		token, err := tm.New(user.ID, -1*time.Hour, "scope")
+		if err != nil {
+			t.Fatal(err)
+		}
+		//time.Sleep(time.Second)
+		_, err = m.GetForToken("scope", token.Plaintext)
+		assert.Equal(t, ErrRecordNotFound, err)
+	})
 }
