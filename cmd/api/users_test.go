@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestCreateUser(t *testing.T) {
@@ -96,7 +97,9 @@ func TestCreateUser(t *testing.T) {
 					assert.NotEmpty(t, v)
 				default:
 					assert.Equal(t, expectedContent[k], v)
+
 					// Check that an email has been sent and a token has been created
+					time.Sleep(time.Second)
 					assert.Equal(t, 1, app.mailer.(*mocks.MockMailer).SendCalledCount)
 					assert.Equal(t, 1, app.models.Tokens.(*mocks.MockTokenModel).TokenCreated)
 				}

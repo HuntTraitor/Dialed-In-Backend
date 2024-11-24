@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"strings"
@@ -58,12 +57,10 @@ func TestCreateAuthenticationHandler(t *testing.T) {
 			}
 
 			if tt.expectedWrapper == "authentication_token" {
-				fmt.Println(body)
 				actualContent := body[tt.expectedWrapper].(map[string]any)
 				assert.NotEmpty(t, actualContent["token"])
 				assert.NotEmpty(t, actualContent["expiry"])
 			} else {
-				fmt.Println(body)
 				assert.Equal(t, tt.expectedResponse["error"], body["error"])
 			}
 		})

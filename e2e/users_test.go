@@ -145,6 +145,8 @@ func TestActivateUser(t *testing.T) {
 	}
 	t.Cleanup(cleanup)
 
+	_ = createUser(t)
+
 	tests := []struct {
 		name               string
 		setupPayload       func(token string) string
@@ -195,15 +197,6 @@ func TestActivateUser(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create a new user
-			payload := `{
-				"name":     "Test User",
-				"email":    "test@example.com",
-				"password": "password"
-			}`
-			requestURL := fmt.Sprintf("http://localhost:%d/v1/users", 3001)
-			_, _, _ = post(t, requestURL, strings.NewReader(payload))
-
 			// Fetch activation token from email
 			var token string
 			waitFor(t, func() bool {
@@ -213,8 +206,8 @@ func TestActivateUser(t *testing.T) {
 			})
 
 			// Activate the user
-			requestURL = fmt.Sprintf("http://localhost:%d/v1/users/activated", 3001)
-			payload = tt.setupPayload(token)
+			requestURL := fmt.Sprintf("http://localhost:%d/v1/users/activated", 3001)
+			payload := tt.setupPayload(token)
 			statusCode, _, body := put(t, requestURL, strings.NewReader(payload))
 
 			// Assertions

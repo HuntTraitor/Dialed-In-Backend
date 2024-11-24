@@ -14,6 +14,7 @@ func TestAuthenticateUser(t *testing.T) {
 		t.Fatalf("failed to launch test program: %v", err)
 	}
 	t.Cleanup(cleanup)
+	_ = createUser(t)
 
 	tests := []struct {
 		name               string
@@ -50,17 +51,14 @@ func TestAuthenticateUser(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			body := createUser(t)
 			requestURL := fmt.Sprintf("http://localhost:%d/v1/tokens/authentication", 3001)
 			statusCode, _, body := post(t, requestURL, strings.NewReader(tt.payload))
 			assert.Equal(t, tt.expectedStatusCode, statusCode)
 			if tt.expectedWrapper == "authentication_token" {
-				fmt.Println(body)
 				actualContent := body[tt.expectedWrapper].(map[string]any)
 				assert.NotEmpty(t, actualContent["token"])
 				assert.NotEmpty(t, actualContent["expiry"])
 			} else {
-				fmt.Println(body)
 				assert.Equal(t, tt.expectedResponse["error"], body["error"])
 			}
 		})
