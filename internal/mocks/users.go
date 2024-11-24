@@ -58,6 +58,17 @@ func (m MockUserModel) GetForToken(tokenScope, tokenPlainText string) (*data.Use
 }
 
 func (m MockUserModel) GetByEmail(email string) (*data.User, error) {
-	// TODO test getbyemail
-	return nil, nil
+	user := &data.User{}
+	switch email {
+	case "notfound@example.com":
+		return nil, data.ErrRecordNotFound
+	default:
+		user.ID = 1
+		user.Email = "test@example.com"
+		err := user.Password.Set("password")
+		if err != nil {
+			return nil, err
+		}
+		return user, nil
+	}
 }

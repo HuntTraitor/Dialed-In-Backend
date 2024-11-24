@@ -124,7 +124,7 @@ func TestUserUpdate(t *testing.T) {
 		expectedErr error
 	}{
 		{
-			name: "Successfully updates Name, Email, Password Hash, Activated, Version for a user",
+			name: "Successfully updates Name, Email, password Hash, Activated, Version for a user",
 			inputUser: &User{
 				Name:  "Test User",
 				Email: "testuser@example.com",

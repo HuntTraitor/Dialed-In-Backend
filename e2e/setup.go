@@ -87,6 +87,7 @@ func runServer(binName string, port string) (sendInterrupt func() error, kill fu
 		"-smtp-port=1025",
 		"-smtp-username="+"",
 		"-smtp-password="+"",
+		"-limiter-enabled=false",
 	)
 
 	cmd.Stdout = os.Stdout

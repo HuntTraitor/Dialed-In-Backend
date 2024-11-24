@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 )
@@ -122,4 +123,17 @@ func extractToken(t *testing.T, emailContent string) string {
 		t.Fatal("failed to extract token")
 	}
 	return ""
+}
+
+// createUser calls a post request to /users and returns the user
+func createUser(t *testing.T) map[string]any {
+	t.Helper()
+	payload := `{
+				"name":     "Test User",
+				"email":    "test@example.com",
+				"password": "password"
+			}`
+	requestURL := fmt.Sprintf("http://localhost:%d/v1/users", 3001)
+	_, _, body := post(t, requestURL, strings.NewReader(payload))
+	return body
 }
