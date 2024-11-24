@@ -56,6 +56,7 @@ func LaunchTestProgram(port string) (cleanup func(), sendInterrupt func() error,
 		}
 		db.Close()
 		os.Remove(binName)
+		fmt.Println("Cleaned up")
 	}
 	if err != nil {
 		cleanup()
