@@ -9,7 +9,7 @@ func (app *application) routes() http.Handler {
 	router := chi.NewRouter()
 
 	// Middleware
-	router.Use(app.recoverPanic, app.rateLimit)
+	router.Use(app.recoverPanic, app.rateLimit, app.authenticate)
 
 	router.NotFound(app.notFoundResponse)
 	router.MethodNotAllowed(app.methodNotAllowedResponse)

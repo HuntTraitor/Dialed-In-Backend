@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
@@ -95,4 +96,92 @@ func TestRateLimit(t *testing.T) {
 		rateLimitMiddleware.ServeHTTP(rr2, req)
 		assert.Equal(t, http.StatusOK, rr2.Code)
 	})
+}
+
+func TestAuthenticate(t *testing.T) {
+	app := newTestApplication()
+	ts := newTestServer(app.routes())
+	defer ts.Close()
+
+	tests := []struct {
+		name               string
+		token              map[string]string
+		expectedStatusCode int
+		expectedUser       *data.User
+		expectedErr        string
+	}{
+		{
+			name:               "No auth header passes through with anonymous user",
+			token:              map[string]string{"": ""},
+			expectedStatusCode: http.StatusOK,
+			expectedUser:       &data.User{},
+			expectedErr:        "",
+		},
+		{
+			name:               "Empty auth header return anonymous user",
+			token:              map[string]string{"Authorization": ""},
+			expectedStatusCode: http.StatusOK,
+			expectedUser:       &data.User{},
+			expectedErr:        "",
+		},
+		{
+			name:               "Poorly formatted auth header returns error",
+			token:              map[string]string{"Authorization": "Bearer "},
+			expectedStatusCode: http.StatusUnauthorized,
+			expectedUser:       nil,
+			expectedErr:        "invalid of missing authentication token",
+		},
+		{
+			name:               "invalid auth header returns error",
+			token:              map[string]string{"Authorization": "Bearer ASDJKLEPOIURERFJDKSLAIEJG2"},
+			expectedStatusCode: http.StatusUnauthorized,
+			expectedUser:       nil,
+			expectedErr:        "invalid of missing authentication token",
+		},
+		{
+			name:               "Correct auth header returns user",
+			token:              map[string]string{"Authorization": "Bearer ASDJKLEPOIURERFJDKSLAIEJG1"},
+			expectedStatusCode: http.StatusOK,
+			expectedUser: &data.User{
+				ID:    1,
+				Name:  "Test User",
+				Email: "test@example.com",
+			},
+			expectedErr: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			// Handler to inspect the user context
+			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				user := app.contextGetUser(r)                // Get the user from the context
+				assert.Equal(t, tt.expectedUser.ID, user.ID) // Validate user
+				assert.Equal(t, tt.expectedUser.Name, user.Name)
+				assert.Equal(t, tt.expectedUser.Email, user.Email)
+				w.WriteHeader(http.StatusOK)
+			})
+
+			// Wrap the handler with the authenticate middleware
+			authenticateMiddleware := app.authenticate(handler)
+
+			// Create the request
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			for k, v := range tt.token {
+				req.Header.Set(k, v)
+			}
+
+			rr := httptest.NewRecorder()
+
+			// Serve the request
+			authenticateMiddleware.ServeHTTP(rr, req)
+
+			// Validate the response
+			assert.Equal(t, tt.expectedStatusCode, rr.Code)
+			if tt.expectedErr != "" {
+				assert.Contains(t, rr.Body.String(), tt.expectedErr)
+			}
+		})
+	}
 }
