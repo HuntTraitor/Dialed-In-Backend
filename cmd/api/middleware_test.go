@@ -185,3 +185,54 @@ func TestAuthenticate(t *testing.T) {
 		})
 	}
 }
+
+func TestRequireActivatedUserMiddleware(t *testing.T) {
+	app := newTestApplication()
+	ts := newTestServer(app.routes())
+	defer ts.Close()
+
+	tests := []struct {
+		name        string
+		user        *data.User
+		expectedErr string
+	}{
+		{
+			name: "Successfully passes through with activated user",
+			user: &data.User{
+				Activated: true,
+			},
+			expectedErr: "",
+		},
+		{
+			name:        "Rejects Anonymous user",
+			user:        data.AnonymousUser,
+			expectedErr: "you must be authenticated to access this resource",
+		},
+		{
+			name: "Rejects unactivated user",
+			user: &data.User{
+				Activated: false,
+			},
+			expectedErr: "your user account must be activated to access this feature",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			})
+
+			requireActivateUserMiddleware := app.requireActivatedUser(handler)
+
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+
+			// set req equal to the request with the user context set
+			req = app.contextSetUser(req, tt.user)
+			rr := httptest.NewRecorder()
+			requireActivateUserMiddleware.ServeHTTP(rr, req)
+
+			assert.Contains(t, rr.Body.String(), tt.expectedErr)
+
+		})
+	}
+}
