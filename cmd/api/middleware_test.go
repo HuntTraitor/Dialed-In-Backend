@@ -1,8 +1,13 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
+	"github.com/hunttraitor/dialed-in-backend/internal/mocks"
 	"github.com/stretchr/testify/assert"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,7 +16,7 @@ import (
 
 func TestRecoverPanic(t *testing.T) {
 	app := newTestApplication()
-	ts := newTestServer(app.routes())
+	ts := newTestServer(nil)
 	defer ts.Close()
 
 	expectedValue := "close"
@@ -49,7 +54,7 @@ func TestRateLimit(t *testing.T) {
 	app.config.limiter.rps = 1
 	app.config.limiter.burst = 1
 	app.config.limiter.expiration = expiration
-	ts := newTestServer(app.routes())
+	ts := newTestServer(nil)
 	defer ts.Close()
 
 	// Creating a handler on the app
@@ -100,7 +105,7 @@ func TestRateLimit(t *testing.T) {
 
 func TestAuthenticate(t *testing.T) {
 	app := newTestApplication()
-	ts := newTestServer(app.routes())
+	ts := newTestServer(nil)
 	defer ts.Close()
 
 	tests := []struct {
@@ -188,7 +193,7 @@ func TestAuthenticate(t *testing.T) {
 
 func TestRequireActivatedUserMiddleware(t *testing.T) {
 	app := newTestApplication()
-	ts := newTestServer(app.routes())
+	ts := newTestServer(nil)
 	defer ts.Close()
 
 	tests := []struct {
@@ -237,7 +242,7 @@ func TestRequireActivatedUserMiddleware(t *testing.T) {
 
 func TestRequireAuthenticatedUserMiddleware(t *testing.T) {
 	app := newTestApplication()
-	ts := newTestServer(app.routes())
+	ts := newTestServer(nil)
 	defer ts.Close()
 
 	tests := []struct {
@@ -273,4 +278,65 @@ func TestRequireAuthenticatedUserMiddleware(t *testing.T) {
 			assert.Contains(t, rr.Body.String(), tt.expectedErr)
 		})
 	}
+}
+
+func TestMetricsMiddleware(t *testing.T) {
+	// Manually add a new application with metrics enabled
+	var cfg config
+	cfg.env = "test"
+	cfg.metrics = true
+	app := &application{
+		config: cfg,
+		logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		models: mocks.NewMockModels(),
+		mailer: mocks.NewMockMailer(),
+	}
+
+	router := app.routes()
+	ts := newTestServer(router)
+	defer ts.Close()
+
+	t.Run("Successfully updates metrics on request", func(t *testing.T) {
+		// Send a request to healthcheck
+		req := httptest.NewRequest(http.MethodGet, "/v1/healthcheck", nil)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Send a request to /debug/vars to check output
+		req = httptest.NewRequest(http.MethodGet, "/debug/vars", nil)
+		rr = httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		var responseBody map[string]any
+		err := json.Unmarshal(rr.Body.Bytes(), &responseBody)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// assert the debug has a 200 response but not a 400 response
+		assert.Equal(t, float64(2), responseBody["total_requests_received"])
+		assert.Equal(t, float64(1), responseBody["total_responses_sent"])
+		assert.Greater(t, responseBody["total_processing_time_microseconds"], float64(0))
+		assert.Equal(t, float64(1), responseBody["total_responses_sent_by_status"].(map[string]any)["200"])
+		assert.Equal(t, nil, responseBody["total_responses_sent_by_status"].(map[string]any)["400"])
+
+		// Send a intentional 400 response request
+		req = httptest.NewRequest(http.MethodPost, "/v1/users", bytes.NewReader([]byte("hi")))
+		rr = httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		// Check /debug/vars again
+		req = httptest.NewRequest(http.MethodGet, "/debug/vars", nil)
+		rr = httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		err = json.Unmarshal(rr.Body.Bytes(), &responseBody)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Assert that the 400 request was not logged
+		assert.Equal(t, float64(2), responseBody["total_responses_sent_by_status"].(map[string]any)["200"])
+		assert.Equal(t, float64(1), responseBody["total_responses_sent_by_status"].(map[string]any)["400"])
+	})
 }

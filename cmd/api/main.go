@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"database/sql"
+	"expvar"
 	"flag"
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"github.com/hunttraitor/dialed-in-backend/internal/mailer"
 	"log/slog"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -17,9 +19,10 @@ import (
 const version = "1.0.0"
 
 type config struct {
-	port int
-	env  string
-	db   struct {
+	port    int
+	env     string
+	metrics bool
+	db      struct {
 		dsn          string
 		maxOpenConns int
 		maxIdleConns int
@@ -76,6 +79,7 @@ func main() {
 	flag.StringVar(&cfg.smtp.username, "smtp-username", SMTPUsername, "SMTP username")
 	flag.StringVar(&cfg.smtp.password, "smtp-password", SMTPPassword, "SMTP password")
 	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Dialed-In <no-reply@dialedin.com>", "SMTP sender")
+	flag.BoolVar(&cfg.metrics, "metrics", false, "Enable application metrics")
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -89,6 +93,21 @@ func main() {
 	defer db.Close()
 
 	logger.Info("Database pool has been established")
+
+	// Add system debug logs to /debug/vars
+	expvar.NewString("version").Set(version)
+
+	expvar.Publish("goroutines", expvar.Func(func() any {
+		return runtime.NumGoroutine()
+	}))
+
+	expvar.Publish("database", expvar.Func(func() any {
+		return db.Stats()
+	}))
+
+	expvar.Publish("timestamp", expvar.Func(func() any {
+		return time.Now().Unix()
+	}))
 
 	app := &application{
 		config: cfg,
