@@ -183,7 +183,7 @@ func TestActivateUser(t *testing.T) {
 		{
 			name: "Token is incorrect / expired",
 			setupPayload: func(token string) string {
-				return fmt.Sprintf(`{"token":"ASDJKLEPOIURERFJDKSLAIEJG1"}`)
+				return `{"token":"ASDJKLEPOIURERFJDKSLAIEJG1"}`
 			},
 			expectedStatusCode: http.StatusUnprocessableEntity,
 			expectedWrapper:    "error",

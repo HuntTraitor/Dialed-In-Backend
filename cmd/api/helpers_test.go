@@ -339,7 +339,7 @@ func TestReadInt(t *testing.T) {
 			v := validator.New()
 			result := app.readInt(test.qs, test.key, test.defaultValue, v)
 			assert.Equal(t, test.expectedResult, result)
-			if v.Errors != nil && len(v.Errors) > 0 {
+			if len(v.Errors) > 0 {
 				assert.Equal(t, v.Errors["name"], test.expectedErr)
 			}
 		})
