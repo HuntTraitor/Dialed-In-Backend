@@ -68,13 +68,16 @@ test-e2e:
 # QUALITY CONTROL
 # ==================================================================================== #
 
-## tidy: format all .go files and tidy module dependencies
+## tidy: format all .go files, tidy and vendor module dependencies
 .PHONY: tidy
 tidy:
 	@echo 'Formatting .go files...'
 	go fmt ./...
 	@echo 'Tidying module dependencies...'
 	go mod tidy
+	@echo 'Verifying and vendoring module dependencies...'
+	go mod verify
+	go mod vendor
 
 ## audit: run quality control checks
 audit:
