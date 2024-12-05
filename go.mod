@@ -16,6 +16,7 @@ require (
 	github.com/go-mail/mail/v2 v2.3.0
 	github.com/joho/godotenv v1.5.1
 	github.com/pressly/goose/v3 v3.22.1
+	github.com/tomasen/realip v0.0.0-20180522021738-f0c99a92ddce
 )
 
 require (

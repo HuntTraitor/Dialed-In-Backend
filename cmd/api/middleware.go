@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
+	"github.com/tomasen/realip"
 	"golang.org/x/time/rate"
-	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -60,11 +60,7 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 		// Check the rate limiting configuration in main.go
 		if app.config.limiter.enabled {
 			// Retrieve ip from host
-			ip, _, err := net.SplitHostPort(r.RemoteAddr)
-			if err != nil {
-				app.serverErrorResponse(w, r, err)
-				return
-			}
+			ip := realip.FromRequest(r)
 
 			// Assign a new rate limiter to a client if they were not found
 			mu.Lock()
