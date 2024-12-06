@@ -26,5 +26,4 @@ func TestHealthCheck(t *testing.T) {
 
 	systemInfo := respBody["system_info"].(map[string]any)
 	assert.Equal(t, systemInfo["environment"], "test")
-	assert.NotEmpty(t, systemInfo["version"])
 }

@@ -17,13 +17,16 @@ help:
 ## run: builds the binary and runs the program
 .PHONY: run
 run: build
-	@./bin/uwe
+	@./bin/api
 
 ## build: builds the binary
 .PHONY: build
 build:
 	@echo 'Building cmd/api...'
-	go build -ldflags='-s' -o=./bin/api ./cmd/api
+	GIT_COMMIT=$(shell git rev-parse HEAD)
+	GIT_DIRTY=$(shell test -n "`git status --porcelain`" && echo "+CHANGES" || true)
+	BUILD_DATE=$(shell TZ=UTC0 git show --quiet --date='format-local:%Y-%m-%dT%T%z' --format="%cd")
+	go build -ldflags="-X github.com/hunttraitor/dialed-in-backend/internal/vcs.revision=${GIT_COMMIT}${GIT_DIRTY} -X github.com/hunttraitor/dialed-in-backend/internal/vcs.time=${BUILD_DATE}" -o=./bin/api ./cmd/api
 	GOOS=linux GOARCH=amd64 go build -ldflags='-s' -o=./bin/linux/_amd64/api ./cmd/api
 
 ## seed: seeds the database
@@ -65,6 +68,16 @@ test-internal:
 .PHONY: test-e2e
 test-e2e:
 	@go test -v ./e2e/...
+
+## docker-up: runs the docker container
+.PHONY: docker-up
+docker-up:
+	docker compose up --build
+
+## docker-down: shuts down the docker container
+.PHONY: docker-down
+docker-down:
+	docker compose down
 
 # ==================================================================================== #
 # QUALITY CONTROL

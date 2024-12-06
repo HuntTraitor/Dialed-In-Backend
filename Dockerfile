@@ -12,8 +12,11 @@ COPY go.mod go.sum ./
 
 RUN go mod download
 
+RUN apk add --no-cache make gcc libc-dev git
+
 #Setup hot-reload for dev stage
 RUN go install -mod=mod github.com/githubnemo/CompileDaemon
 RUN go get -v golang.org/x/tools/gopls
+COPY Makefile .
 
-ENTRYPOINT CompileDaemon --build="go build -a -installsuffix cgo -o main ./cmd/api/" --command="./main -smtp-host=localhost -smtp-port=1025 -smtp-username= -smtp-password= -metrics=true"
+ENTRYPOINT CompileDaemon --build="make build" --command="./bin/api -smtp-host=localhost -smtp-port=1025 -smtp-username= -smtp-password= -metrics=true"
