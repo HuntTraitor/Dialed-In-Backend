@@ -22,7 +22,9 @@ run: build
 ## build: builds the binary
 .PHONY: build
 build:
-	@go build -o bin/uwe ./cmd/api/.
+	@echo 'Building cmd/api...'
+	go build -ldflags='-s' -o=./bin/api ./cmd/api
+	GOOS=linux GOARCH=amd64 go build -ldflags='-s' -o=./bin/linux/_amd64/api ./cmd/api
 
 ## seed: seeds the database
 .PHONY: seed
