@@ -14,6 +14,8 @@ services:
     tty: true
     build: .
     restart: on-failure
+    ports:
+      - "3000:3000"
     volumes:
       - .:/app
     depends_on:
@@ -30,6 +32,8 @@ services:
       - POSTGRES_PORT=${POSTGRES_PORT}
       - POSTGRES_DB=${POSTGRES_DB}
       - DATABASE_HOST=${DATABASE_HOST}
+    ports:
+      - "5432:5432"
     volumes:
       - ./db/sql/databases.sql:/docker-entrypoint-initdb.d/1.databases.sql
       - pgdata:/var/lib/postgresql/data
