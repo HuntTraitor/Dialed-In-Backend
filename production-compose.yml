@@ -12,10 +12,14 @@ services:
       - SMTP_USERNAME=${SMTP_USERNAME}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
     tty: true
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: prod
     restart: on-failure
     ports:
       - "3000:3000"
+    command: ["/app/bin/api", "-metrics=true", "-env=production"]
     volumes:
       - .:/app
     depends_on:

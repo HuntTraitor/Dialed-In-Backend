@@ -12,9 +12,13 @@ services:
       - SMTP_USERNAME=${SMTP_USERNAME}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
     tty: true
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
     ports:
       - '3000:3000'
+    entrypoint: [ "CompileDaemon", "--build=make build", "--command=./bin/api -smtp-host=localhost -smtp-port=1025 -smtp-username= -smtp-password= -metrics=true" ]
     restart: on-failure
     volumes:
       - .:/app
