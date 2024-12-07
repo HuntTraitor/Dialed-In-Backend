@@ -1,0 +1,51 @@
+services:
+  app:
+    container_name: web
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - DATABASE_HOST=${DATABASE_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - DATABASE_URL=${DATABASE_URL}
+      - TEST_DATABASE_URL=${TEST_DATABASE_URL}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+    tty: true
+    build: .
+    restart: on-failure
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+    extra_hosts:
+      - "localhost:172.17.0.1"
+
+  db:
+    image: postgres:latest
+    container_name: postgres_container
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - DATABASE_HOST=${DATABASE_HOST}
+    volumes:
+      - ./db/sql/databases.sql:/docker-entrypoint-initdb.d/1.databases.sql
+      - pgdata:/var/lib/postgresql/data
+
+  caddy:
+    image: caddy:latest
+    container_name: caddy-service
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - $PWD/Caddyfile:etc/caddy/Caddyfile
+      - $PWD/site:/srv
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:

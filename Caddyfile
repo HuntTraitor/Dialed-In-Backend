@@ -1,0 +1,5 @@
+api.dialedin.com {
+    reverse-proxy api:3000 {
+        header_down Strict-Transport-Security max-age=31536000;
+    }
+}

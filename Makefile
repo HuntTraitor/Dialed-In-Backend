@@ -102,3 +102,13 @@ audit:
 	@echo 'Running tests...'
 	make test-all
 
+# ==================================================================================== #
+# PRODUCTION
+# ==================================================================================== #
+
+## deploy: deploy to production
+.PHONY: deploy
+deploy:
+	git pull
+	docker compose -f production-compose.yml up -d --build
+
