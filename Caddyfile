@@ -1,5 +1,5 @@
 dialedincafe.com {
-    reverse_proxy api:3000 {
+    reverse_proxy web:3000 {
         header_down Strict-Transport-Security "max-age=31536000"
     }
 }
