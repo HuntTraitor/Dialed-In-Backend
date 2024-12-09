@@ -37,17 +37,17 @@ seed:
 ## db-stats: checks the status of the database to see if you are connected
 .PHONY: db-status
 db-status:
-	@GOOSE_DRIVER=postgres GOOSE_DBSTRING=$(DATABASE_URL) goose -dir="db/migrations" status
+	@GOOSE_DRIVER=postgres GOOSE_DBSTRING=$(MIGRATION_URL) goose -dir="db/migrations" status
 
 ## up: runs the up migrations
 .PHONY: up
 up:
-	@GOOSE_DRIVER=postgres GOOSE_DBSTRING=$(DATABASE_URL) goose -dir="db/migrations" up
+	@GOOSE_DRIVER=postgres GOOSE_DBSTRING=$(MIGRATION_URL) goose -dir="db/migrations" up
 
 ## reset: resets the migrations
 .PHONY: reset
 reset:
-	@GOOSE_DRIVER=postgres GOOSE_DBSTRING=$(DATABASE_URL) goose -dir="db/migrations" reset
+	@GOOSE_DRIVER=postgres GOOSE_DBSTRING=$(MIGRATION_URL) goose -dir="db/migrations" reset
 
 ## test-all: runs all unit tests sequentially
 .PHONY: test-all
@@ -106,9 +106,21 @@ audit:
 # PRODUCTION
 # ==================================================================================== #
 
-## deploy: deploy to production
-.PHONY: deploy
-deploy:
-	git pull
-	docker compose -f production-compose.yml up -d --build
+production_host_ip = '143.198.167.26'
+
+## prod/deploy: deploy to production
+.PHONY: prod/deploy
+prod/deploy:
+	ssh -t root@${production_host_ip} '\
+	cd app/Dialed-In-Backend \
+	&& git pull \
+	&& docker compose -f production-compose.yml restart \
+	&& make up \
+	'
+
+## production/connect: connect to the production server
+.PHONY: prod/connect
+prod/connect:
+	ssh root@${production_host_ip}
+
 
