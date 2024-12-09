@@ -52,22 +52,22 @@ reset:
 ## test-all: runs all unit tests sequentially
 .PHONY: test-all
 test-all:
-	@docker compose exec -T app go test -v -p=1 -count=1 ./...
+	@docker compose exec -T app go test -v -p=1 -count=1 -buildvcs=false ./...
 
 ## test-api: runs all API endpoint tests against a mock database
 .PHONY: test-api
 test-api:
-	@docker compose exec -T app go test -v ./cmd/api/...
+	@docker compose exec -T app go test -v -buildvcs=false ./cmd/api/...
 
 ## test-internal: runs all internal business logic such as SQL queries against a test database
 .PHONY: test-internal
 test-internal:
-	@docker compose exec -T app go test -v ./internal/...
+	@docker compose exec -T app go test -v -buildvcs=false ./internal/...
 
 ## test-e2e: spins up a real version of the application and runs tests against a test database
 .PHONY: test-e2e
 test-e2e:
-	@docker compose exec -T app go test -v ./e2e/...
+	@docker compose exec -T app go test -v -buildvcs=false ./e2e/...
 
 ## docker-up: runs the docker container
 .PHONY: docker-up
@@ -115,10 +115,8 @@ prod/deploy:
         cd app/Dialed-In-Backend && \
         git pull && \
         docker compose -f production-compose.yml restart && \
-        until docker exec -t postgres_container pg_isready -U postgres -d production; do \
-            echo "Waiting for PostgreSQL to be ready..."; \
-            sleep 5; \
-        done && \
+        echo "sleep for 3 seconds..." && \
+        sleep 3 && \
         make up \
 	'
 
