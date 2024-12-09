@@ -112,10 +112,14 @@ production_host_ip = '143.198.167.26'
 .PHONY: prod/deploy
 prod/deploy:
 	ssh -t root@${production_host_ip} '\
-	cd app/Dialed-In-Backend \
-	&& git pull \
-	&& docker compose -f production-compose.yml restart \
-	&& make up \
+        cd app/Dialed-In-Backend && \
+        git pull && \
+        docker compose -f production-compose.yml restart && \
+        until docker exec -t postgres_container pg_isready -U postgres -d production; do \
+            echo "Waiting for PostgreSQL to be ready..."; \
+            sleep 5; \
+        done && \
+        make up \
 	'
 
 ## production/connect: connect to the production server
