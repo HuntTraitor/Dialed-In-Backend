@@ -120,7 +120,7 @@ prod/deploy:
         make up \
 	'
 
-## production/connect: connect to the production server
+## prod/connect: connect to the production server
 .PHONY: prod/connect
 prod/connect:
 	ssh root@${production_host_ip}

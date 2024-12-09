@@ -129,7 +129,7 @@ func buildBinary() (string, error) {
 	binName := randomString(10) + "-" + baseBinName
 
 	// Prepare the build command
-	build := exec.Command("go", "build", "-o", binName, "../cmd/api/.")
+	build := exec.Command("go", "build", "-o", binName, "-buildvcs=false", "../cmd/api/.")
 
 	// Capture the output of the build command
 	output, err := build.CombinedOutput()
