@@ -17,6 +17,7 @@ RUN apk add --no-cache make gcc libc-dev git
 # Setup hot-reload for dev stage
 RUN go install -mod=mod github.com/githubnemo/CompileDaemon
 RUN go get -v golang.org/x/tools/gopls
+RUN go install github.com/pressly/goose/v3/cmd/goose@latest
 COPY Makefile .
 
 ENV PATH=$PATH:/root/go/bin
@@ -37,6 +38,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 
 RUN go mod download
+RUN go install github.com/pressly/goose/v3/cmd/goose@latest
 
 # Install necessary build tools for production
 RUN apk add --no-cache make gcc libc-dev git

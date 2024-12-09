@@ -37,37 +37,37 @@ seed:
 ## db-stats: checks the status of the database to see if you are connected
 .PHONY: db-status
 db-status:
-	@GOOSE_DRIVER=postgres GOOSE_DBSTRING=$(MIGRATION_URL) goose -dir="db/migrations" status
+	@docker compose exec -T app goose -dir=db/migrations postgres "$(MIGRATION_URL)" status
 
 ## up: runs the up migrations
 .PHONY: up
 up:
-	@GOOSE_DRIVER=postgres GOOSE_DBSTRING=$(MIGRATION_URL) goose -dir="db/migrations" up
+	@docker compose exec -T app goose -dir=db/migrations postgres "$(MIGRATION_URL)" up
 
 ## reset: resets the migrations
 .PHONY: reset
 reset:
-	@GOOSE_DRIVER=postgres GOOSE_DBSTRING=$(MIGRATION_URL) goose -dir="db/migrations" reset
+	@docker compose exec -T app goose -dir=db/migrations postgres "$(MIGRATION_URL)" reset
 
 ## test-all: runs all unit tests sequentially
 .PHONY: test-all
 test-all:
-	@go test -v -p=1 -count=1 ./...
+	@docker compose exec -T app go test -v -p=1 -count=1 ./...
 
 ## test-api: runs all API endpoint tests against a mock database
 .PHONY: test-api
 test-api:
-	@go test -v ./cmd/api/...
+	@docker compose exec -T app go test -v ./cmd/api/...
 
 ## test-internal: runs all internal business logic such as SQL queries against a test database
 .PHONY: test-internal
 test-internal:
-	@go test -v ./internal/...
+	@docker compose exec -T app go test -v ./internal/...
 
 ## test-e2e: spins up a real version of the application and runs tests against a test database
 .PHONY: test-e2e
 test-e2e:
-	@go test -v ./e2e/...
+	@docker compose exec -T app go test -v ./e2e/...
 
 ## docker-up: runs the docker container
 .PHONY: docker-up

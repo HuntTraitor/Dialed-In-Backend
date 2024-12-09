@@ -24,8 +24,6 @@ services:
       - .:/app
     depends_on:
       - db
-    extra_hosts:
-      - "localhost:172.17.0.1"
 
   db:
     image: postgres:latest
@@ -59,3 +57,7 @@ volumes:
   pgdata:
   caddy_data:
   caddy_config:
+
+networks:
+  default:
+    driver: bridge
