@@ -17,8 +17,10 @@ services:
       dockerfile: Dockerfile
       target: prod
     restart: on-failure
-    expose:
-      - "3000"
+    ports:
+      - "3000:3000"
+#    expose:
+#      - "3000"
     command: ["/app/bin/api", "-metrics=true", "-env=production"]
     volumes:
       - .:/app
