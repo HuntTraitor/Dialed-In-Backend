@@ -114,7 +114,8 @@ prod/deploy:
 	ssh -t root@${production_host_ip} '\
         cd app/Dialed-In-Backend && \
         git pull && \
-        docker compose -f production-compose.yml restart && \
+        docker compose -f production-compose.yml down && \
+        docker compose -f production-compose.yml up --build -d && \
         echo "sleep for 3 seconds..." && \
         sleep 3 && \
         make up \
