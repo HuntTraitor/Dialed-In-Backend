@@ -7,9 +7,4 @@ dialedincafe.com {
     reverse_proxy web:3000 {
         header_down Strict-Transport-Security "max-age=31536000"
     }
-    log {
-      output stdout
-      format json
-      level DEBUG
-    }
 }
