@@ -82,7 +82,7 @@ func main() {
 	flag.IntVar(&cfg.smtp.port, "smtp-port", 2525, "SMTP port")
 	flag.StringVar(&cfg.smtp.username, "smtp-username", SMTPUsername, "SMTP username")
 	flag.StringVar(&cfg.smtp.password, "smtp-password", SMTPPassword, "SMTP password")
-	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Dialed-In <no-reply@dialedin.com>", "SMTP sender")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Dialed-In <no-reply@dialedincafe.com>", "SMTP sender")
 	flag.BoolVar(&cfg.metrics, "metrics", false, "Enable application metrics")
 	displayVersion := flag.Bool("version", false, "Display version and exit")
 	flag.Parse()
