@@ -15,7 +15,7 @@ func (app *application) routes() http.Handler {
 	}
 
 	// Middleware
-	router.Use(app.recoverPanic, app.rateLimit, app.authenticate)
+	router.Use(app.recoverPanic, app.logRequest, app.rateLimit, app.authenticate)
 
 	router.NotFound(app.notFoundResponse)
 	router.MethodNotAllowed(app.methodNotAllowedResponse)

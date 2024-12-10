@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"expvar"
 	"fmt"
@@ -8,12 +9,57 @@ import (
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"github.com/tomasen/realip"
 	"golang.org/x/time/rate"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
+
+type wrappedResponseWriter struct {
+	wrapped       http.ResponseWriter
+	statusCode    int
+	headerWritten bool
+	body          *bytes.Buffer
+}
+
+// newWrappedResponseWriter creates a new response writer that is just a wrapper for a regular responseWriter
+// that records the status codes
+func newWrappedResponseWriter(w http.ResponseWriter) *wrappedResponseWriter {
+	return &wrappedResponseWriter{
+		wrapped:    w,
+		statusCode: http.StatusOK,
+		body:       &bytes.Buffer{},
+	}
+}
+
+// Header to implement responseWriter interface
+func (ww *wrappedResponseWriter) Header() http.Header {
+	return ww.wrapped.Header()
+}
+
+// WriteHeader to implement responseWriter interface
+func (ww *wrappedResponseWriter) WriteHeader(statusCode int) {
+	ww.wrapped.WriteHeader(statusCode)
+
+	if !ww.headerWritten {
+		ww.statusCode = statusCode
+		ww.headerWritten = true
+	}
+}
+
+// Write to implement responseWriter interface
+func (ww *wrappedResponseWriter) Write(b []byte) (int, error) {
+	ww.headerWritten = true
+	ww.body.Write(b)
+	return ww.wrapped.Write(b)
+}
+
+// Unwrap returns the original wrapped requestWriter
+func (ww *wrappedResponseWriter) Unwrap() http.ResponseWriter {
+	return ww.wrapped
+}
 
 func (app *application) recoverPanic(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -24,6 +70,44 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 			}
 		}()
 		next.ServeHTTP(w, r)
+	})
+}
+
+// logRequest logs the incoming request in the logger
+func (app *application) logRequest(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var (
+			ip     = r.RemoteAddr
+			proto  = r.Proto
+			method = r.Method
+			uri    = r.URL.RequestURI()
+		)
+
+		var body []byte
+		if r.Body != nil {
+			body, _ = io.ReadAll(r.Body)
+			r.Body = io.NopCloser(bytes.NewReader(body)) // Reset the body for further handlers
+		}
+		prettyBody := strings.ReplaceAll(string(body), " ", "")
+		prettyBody = strings.ReplaceAll(prettyBody, "\n", "")
+
+		app.logger.Info("received request",
+			"ip", ip,
+			"proto", proto,
+			"method", method,
+			"uri", uri,
+			"body", prettyBody,
+		)
+
+		ww := newWrappedResponseWriter(w)
+
+		next.ServeHTTP(ww, r)
+
+		responseBody := strings.ReplaceAll(ww.body.String(), " ", "")
+		responseBody = strings.ReplaceAll(responseBody, "\n", "")
+		responseBody = strings.ReplaceAll(responseBody, "\t", "")
+
+		app.logger.Info("received response", "status", ww.statusCode, "body", responseBody)
 	})
 }
 
@@ -161,47 +245,6 @@ func (app *application) requireActivatedUser(next http.Handler) http.Handler {
 	return app.requireAuthenticatedUser(fn)
 }
 
-type metricsResponseWriter struct {
-	wrapped       http.ResponseWriter
-	statusCode    int
-	headerWritten bool
-}
-
-// newMetricsResponseWriter creates a new response writer that is just a wrapper for a regular responseWriter
-// that records the status codes
-func newMetricsResponseWriter(w http.ResponseWriter) *metricsResponseWriter {
-	return &metricsResponseWriter{
-		wrapped:    w,
-		statusCode: http.StatusOK,
-	}
-}
-
-// Header to implement responseWriter interface
-func (mw *metricsResponseWriter) Header() http.Header {
-	return mw.wrapped.Header()
-}
-
-// WriteHeader to implement responseWriter interface
-func (mw *metricsResponseWriter) WriteHeader(statusCode int) {
-	mw.wrapped.WriteHeader(statusCode)
-
-	if !mw.headerWritten {
-		mw.statusCode = statusCode
-		mw.headerWritten = true
-	}
-}
-
-// Write to implement responseWriter interface
-func (mw *metricsResponseWriter) Write(b []byte) (int, error) {
-	mw.headerWritten = true
-	return mw.wrapped.Write(b)
-}
-
-// Unwrap returns the original wrapped requestWriter
-func (mw *metricsResponseWriter) Unwrap() http.ResponseWriter {
-	return mw.wrapped
-}
-
 // metrics updates information about the requests, responses, and response times received by the server
 func (app *application) metrics(next http.Handler) http.Handler {
 	var (
@@ -217,11 +260,11 @@ func (app *application) metrics(next http.Handler) http.Handler {
 		totalRequestsReceived.Add(1)
 
 		// create new metricsResponseWriter
-		mw := newMetricsResponseWriter(w)
-		next.ServeHTTP(mw, r)
+		ww := newWrappedResponseWriter(w)
+		next.ServeHTTP(ww, r)
 
 		totalResponsesSent.Add(1)
-		totalResponsesSentByStatus.Add(strconv.Itoa(mw.statusCode), 1)
+		totalResponsesSentByStatus.Add(strconv.Itoa(ww.statusCode), 1)
 		duration := time.Since(start).Microseconds()
 
 		totalProcessingTimeMicroseconds.Add(duration)

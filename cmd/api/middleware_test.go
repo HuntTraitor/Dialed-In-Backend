@@ -41,6 +41,48 @@ func TestRecoverPanic(t *testing.T) {
 	assert.Contains(t, rr.Body.String(), expectedError["error"])
 }
 
+func TestLogRequest(t *testing.T) {
+	// Create a new logger that outputs its output into a buffer
+	buf := new(bytes.Buffer)
+	logHandler := slog.NewTextHandler(buf, nil)
+	logger := slog.New(logHandler)
+	var cfg config
+	app := &application{
+		config: cfg,
+		logger: logger,
+		models: mocks.NewMockModels(),
+		mailer: mocks.NewMockMailer(),
+	}
+
+	ts := newTestServer(nil)
+	defer ts.Close()
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		_, err := w.Write([]byte("Test Response Body"))
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	loggerMiddleware := app.logRequest(handler)
+
+	t.Run("Successfully logs the request and response", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rr := httptest.NewRecorder()
+
+		loggerMiddleware.ServeHTTP(rr, req)
+		expectedRequestLog := "method=GET uri=/ body=\""
+		expectedResponseLog := "status=200 body=TestResponseBody"
+
+		// Read from the buffer and assert the logs are correct
+		assert.Contains(t, buf.String(), expectedRequestLog)
+		assert.Contains(t, buf.String(), expectedResponseLog)
+
+	})
+}
+
 func TestRateLimit(t *testing.T) {
 	// Initializing expectations
 	expiration := time.Second
