@@ -3,7 +3,7 @@
 }
 
 dialedincafe.com {
-    response /debug/* "Not Permitted" 403
+    respond /debug/* "Not Permitted" 403
     reverse_proxy web:3000 {
         header_down Strict-Transport-Security "max-age=31536000"
     }
