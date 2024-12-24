@@ -84,3 +84,8 @@ func (app *application) inactiveAccountResponse(w http.ResponseWriter, r *http.R
 	message := "your user account must be activated to access this feature"
 	app.errorResponse(w, r, http.StatusUnauthorized, message)
 }
+
+func (app *application) notVerifiedResponse(w http.ResponseWriter, r *http.Request) {
+	message := "your user account must be verified to login, please verify your account by checking your email"
+	app.errorResponse(w, r, http.StatusUnauthorized, message)
+}

@@ -62,9 +62,18 @@ func (m MockUserModel) GetByEmail(email string) (*data.User, error) {
 	switch email {
 	case "notfound@example.com":
 		return nil, data.ErrRecordNotFound
+	case "notactivated@example.com":
+		user.ID = 1
+		user.Email = "notactivated@example.com"
+		err := user.Password.Set("password")
+		if err != nil {
+			return nil, err
+		}
+		return user, nil
 	default:
 		user.ID = 1
 		user.Email = "test@example.com"
+		user.Activated = true
 		err := user.Password.Set("password")
 		if err != nil {
 			return nil, err

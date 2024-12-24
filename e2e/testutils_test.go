@@ -137,3 +137,15 @@ func createUser(t *testing.T) map[string]any {
 	_, _, body := post(t, requestURL, strings.NewReader(payload))
 	return body
 }
+
+// activateUser calls a put request to /users/activated to activate a user
+func activateUser(t *testing.T, token string) map[string]any {
+	t.Helper()
+	payload := fmt.Sprintf(`{
+				"token": "%s"
+			}`, token)
+
+	requestURL := fmt.Sprintf("http://localhost:%d/v1/users/activated", 3001)
+	_, _, body := put(t, requestURL, strings.NewReader(payload))
+	return body
+}

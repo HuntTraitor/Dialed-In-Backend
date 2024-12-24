@@ -52,6 +52,12 @@ func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, 
 		return
 	}
 
+	// check that the user is activated
+	if !user.Activated {
+		app.notVerifiedResponse(w, r)
+		return
+	}
+
 	token, err := app.models.Tokens.New(user.ID, 350*time.Hour, data.ScopeActivation)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)

@@ -16,6 +16,14 @@ func TestAuthenticateUser(t *testing.T) {
 	t.Cleanup(cleanup)
 	_ = createUser(t)
 
+	t.Run("Unactivated user cannot log in", func(t *testing.T) {
+		payload := `{"email": "test@example.com", "password": "password"}`
+		requestURL := fmt.Sprintf("http://localhost:%d/v1/tokens/authentication", 3001)
+		statusCode, _, body := post(t, requestURL, strings.NewReader(payload))
+		assert.Equal(t, http.StatusUnauthorized, statusCode)
+		assert.Equal(t, "your user account must be verified to login, please verify your account by checking your email", body["error"])
+	})
+
 	tests := []struct {
 		name               string
 		payload            string
@@ -51,6 +59,16 @@ func TestAuthenticateUser(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var token string
+			waitFor(t, func() bool {
+				body, _ := getEmail(t, "containing", "token")
+				token = extractToken(t, body)
+				return token != ""
+			})
+
+			// activate the user
+			_ = activateUser(t, token)
+
 			requestURL := fmt.Sprintf("http://localhost:%d/v1/tokens/authentication", 3001)
 			statusCode, _, body := post(t, requestURL, strings.NewReader(tt.payload))
 			assert.Equal(t, tt.expectedStatusCode, statusCode)
@@ -63,5 +81,4 @@ func TestAuthenticateUser(t *testing.T) {
 			}
 		})
 	}
-
 }
