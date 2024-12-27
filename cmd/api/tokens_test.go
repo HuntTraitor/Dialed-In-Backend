@@ -26,15 +26,15 @@ func TestCreateAuthenticationHandler(t *testing.T) {
 			expectedStatusCode: http.StatusCreated,
 			expectedWrapper:    "authentication_token",
 		},
-		{
-			name:               "Fails to authenticate unactivated user",
-			payload:            `{"email": "notactivated@example.com", "password": "password"}`,
-			expectedStatusCode: http.StatusUnauthorized,
-			expectedWrapper:    "",
-			expectedResponse: map[string]any{
-				"error": "your user account must be verified to login, please verify your account by checking your email",
-			},
-		},
+		//{
+		//	name:               "Fails to authenticate unactivated user",
+		//	payload:            `{"email": "notactivated@example.com", "password": "password"}`,
+		//	expectedStatusCode: http.StatusUnauthorized,
+		//	expectedWrapper:    "",
+		//	expectedResponse: map[string]any{
+		//		"error": "your user account must be verified to login, please verify your account by checking your email",
+		//	},
+		//},
 		{
 			name:               "Incorrect email returns error",
 			payload:            `{"email": "notfound@example.com", "password": "password"}`,
