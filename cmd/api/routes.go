@@ -45,6 +45,7 @@ func (app *application) loadUserRoutes(router chi.Router) {
 
 func (app *application) loadTokenRoutes(router chi.Router) {
 	router.Post("/authentication", app.createAuthenticationTokenHandler)
+	router.Get("/verify", app.verifyTokenHandler)
 }
 
 func (app *application) loadDebugRoutes(router chi.Router) {
