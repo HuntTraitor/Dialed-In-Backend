@@ -41,11 +41,11 @@ func (app *application) loadHealthCheckRoutes(router chi.Router) {
 func (app *application) loadUserRoutes(router chi.Router) {
 	router.Post("/", app.registerUserHandler)
 	router.Put("/activated", app.activateUserHandler)
+	router.With(app.requireAuthenticatedUser).Get("/verify", app.verifyUserHandler)
 }
 
 func (app *application) loadTokenRoutes(router chi.Router) {
 	router.Post("/authentication", app.createAuthenticationTokenHandler)
-	router.Get("/verify", app.verifyTokenHandler)
 }
 
 func (app *application) loadDebugRoutes(router chi.Router) {

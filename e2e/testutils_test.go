@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -60,6 +61,37 @@ func put(t *testing.T, url string, body io.Reader) (int, http.Header, map[string
 		t.Fatal(err)
 	}
 	return res.StatusCode, res.Header, responseBody
+}
+
+// get sends a get request to a certain urlPath with some headers
+func get(t *testing.T, urlPath string, headers map[string]string) (int, http.Header, string) {
+	t.Helper()
+
+	// Create a new GET request
+	req, err := http.NewRequest(http.MethodGet, urlPath, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Add custom headers to the request
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+
+	// Send the request
+	rs, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rs.Body.Close()
+
+	// Read and return the response
+	body, err := io.ReadAll(rs.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body = bytes.TrimSpace(body)
+	return rs.StatusCode, rs.Header, string(body)
 }
 
 // getEmail returns the string version and amount of emails with a kind and query linked to
@@ -134,6 +166,18 @@ func createUser(t *testing.T) map[string]any {
 				"password": "password"
 			}`
 	requestURL := fmt.Sprintf("http://localhost:%d/v1/users", 3001)
+	_, _, body := post(t, requestURL, strings.NewReader(payload))
+	return body
+}
+
+// authenticateUser authenticates the user and returns the token
+func authenticateUser(t *testing.T) map[string]any {
+	t.Helper()
+	payload := `{
+				"email": "test@example.com",
+				"password": "password"
+			}`
+	requestURL := fmt.Sprintf("http://localhost:%d/v1/tokens/authentication", 3001)
 	_, _, body := post(t, requestURL, strings.NewReader(payload))
 	return body
 }

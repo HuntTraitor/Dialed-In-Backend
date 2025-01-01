@@ -211,3 +211,76 @@ func TestActivateUser(t *testing.T) {
 		})
 	}
 }
+
+func TestVerifyUser(t *testing.T) {
+	app := newTestApplication()
+	ts := newTestServer(app.routes())
+	defer ts.Close()
+
+	tests := []struct {
+		name               string
+		token              string
+		expectedStatusCode int
+		expectedWrapper    string
+		expectedResponse   map[string]any
+	}{
+		{
+			name:               "Successfully verifies User",
+			token:              `ASDJKLEPOIURERFJDKSLAIEJG1`,
+			expectedStatusCode: http.StatusOK,
+			expectedWrapper:    "user",
+			expectedResponse: map[string]any{
+				"user": map[string]any{
+					"id":        1,
+					"name":      "Test User",
+					"email":     "test@example.com",
+					"activated": false,
+				},
+			},
+		},
+		{
+			name:               "No Token provided",
+			token:              "",
+			expectedStatusCode: http.StatusUnauthorized,
+			expectedWrapper:    "",
+			expectedResponse: map[string]any{
+				"error": "invalid or missing authentication token",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			headers := map[string]string{
+				"Authorization": "Bearer " + tt.token,
+			}
+			statusCode, _, returnedBody := ts.get(t, "/v1/users/verify", headers)
+			assert.Equal(t, tt.expectedStatusCode, statusCode)
+
+			var body map[string]any
+			err := json.Unmarshal([]byte(returnedBody), &body)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if tt.expectedWrapper == "" {
+				assert.Contains(t, body["error"], tt.expectedResponse["error"])
+				return
+			}
+
+			assert.NotEmpty(t, body[tt.expectedWrapper])
+			actualContent := body[tt.expectedWrapper].(map[string]any)
+			expectedContent := tt.expectedResponse[tt.expectedWrapper].(map[string]any)
+
+			for k, v := range actualContent {
+				switch k {
+				case "id":
+					assert.NotEmpty(t, v)
+				case "created_at":
+					assert.NotEmpty(t, v)
+				default:
+					assert.Equal(t, expectedContent[k], v)
+				}
+			}
+		})
+	}
+}

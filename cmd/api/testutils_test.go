@@ -31,14 +31,28 @@ func newTestServer(h http.Handler) *testServer {
 	return &testServer{ts}
 }
 
-func (ts *testServer) get(t *testing.T, urlPath string) (int, http.Header, string) {
+func (ts *testServer) get(t *testing.T, urlPath string, headers map[string]string) (int, http.Header, string) {
 	t.Helper()
-	rs, err := ts.Client().Get(ts.URL + urlPath)
+
+	// Create a new GET request
+	req, err := http.NewRequest(http.MethodGet, ts.URL+urlPath, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	// Add custom headers to the request
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+
+	// Send the request
+	rs, err := ts.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer rs.Body.Close()
+
+	// Read and return the response
 	body, err := io.ReadAll(rs.Body)
 	if err != nil {
 		t.Fatal(err)

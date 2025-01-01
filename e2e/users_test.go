@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"net/http"
@@ -219,6 +220,89 @@ func TestActivateUser(t *testing.T) {
 
 			for key, value := range expectedContent {
 				assert.Equal(t, value, actualContent[key], "Mismatch for key: %s", key)
+			}
+		})
+	}
+}
+
+func TestVerifyUser(t *testing.T) {
+	cleanup, _, err := LaunchTestProgram(port)
+	if err != nil {
+		t.Fatalf("failed to launch test program: %v", err)
+	}
+	t.Cleanup(cleanup)
+
+	_ = createUser(t)
+
+	resp := authenticateUser(t)
+
+	token := resp["authentication_token"].(map[string]any)["token"].(string)
+
+	tests := []struct {
+		name               string
+		token              string
+		expectedStatusCode int
+		expectedWrapper    string
+		expectedResponse   map[string]any
+	}{
+		{
+			name:               "Succesfully verifies user",
+			token:              token,
+			expectedStatusCode: http.StatusOK,
+			expectedWrapper:    "user",
+			expectedResponse: map[string]any{
+				"user": map[string]any{
+					"id":        1,
+					"name":      "Test User",
+					"email":     "test@example.com",
+					"activated": false,
+				},
+			},
+		},
+		{
+			name:               "No Token provided",
+			token:              "",
+			expectedStatusCode: http.StatusUnauthorized,
+			expectedWrapper:    "",
+			expectedResponse: map[string]any{
+				"error": "invalid or missing authentication token",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			headers := map[string]string{
+				"Authorization": fmt.Sprintf("Bearer %s", tt.token),
+			}
+			requestURL := fmt.Sprintf("http://localhost:%d/v1/users/verify", 3001)
+			statusCode, _, returnedBody := get(t, requestURL, headers)
+			assert.Equal(t, tt.expectedStatusCode, statusCode)
+
+			var body map[string]any
+			err := json.Unmarshal([]byte(returnedBody), &body)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if tt.expectedWrapper == "" {
+				assert.Contains(t, body["error"], tt.expectedResponse["error"])
+				return
+			}
+
+			assert.NotEmpty(t, body[tt.expectedWrapper])
+			actualContent := body[tt.expectedWrapper].(map[string]any)
+			expectedContent := tt.expectedResponse[tt.expectedWrapper].(map[string]any)
+
+			for k, v := range actualContent {
+				switch k {
+				case "id":
+					assert.NotEmpty(t, v)
+				case "created_at":
+					assert.NotEmpty(t, v)
+				default:
+					assert.Equal(t, expectedContent[k], v)
+				}
 			}
 		})
 	}
