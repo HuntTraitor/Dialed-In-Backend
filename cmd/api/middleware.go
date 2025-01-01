@@ -203,7 +203,7 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 		}
 
 		// Get the user associated with the token
-		user, err := app.models.Users.GetForToken(data.ScopeActivation, token)
+		user, err := app.models.Users.GetForToken(data.ScopeAuthentication, token)
 		if err != nil {
 			switch {
 			case errors.Is(err, data.ErrRecordNotFound):
