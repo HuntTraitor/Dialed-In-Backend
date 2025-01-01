@@ -176,14 +176,14 @@ func TestAuthenticate(t *testing.T) {
 			token:              map[string]string{"Authorization": "Bearer "},
 			expectedStatusCode: http.StatusUnauthorized,
 			expectedUser:       nil,
-			expectedErr:        "invalid of missing authentication token",
+			expectedErr:        "invalid or missing authentication token",
 		},
 		{
 			name:               "invalid auth header returns error",
 			token:              map[string]string{"Authorization": "Bearer ASDJKLEPOIURERFJDKSLAIEJG2"},
 			expectedStatusCode: http.StatusUnauthorized,
 			expectedUser:       nil,
-			expectedErr:        "invalid of missing authentication token",
+			expectedErr:        "invalid or missing authentication token",
 		},
 		{
 			name:               "Correct auth header returns user",

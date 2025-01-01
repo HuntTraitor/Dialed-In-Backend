@@ -13,7 +13,7 @@ func TestHealthCheck(t *testing.T) {
 	ts := newTestServer(app.routes())
 	defer ts.Close()
 
-	code, _, body := ts.get(t, "/v1/healthcheck")
+	code, _, body := ts.get(t, "/v1/healthcheck", nil)
 
 	var respBody map[string]any
 	err := json.Unmarshal([]byte(body), &respBody)
