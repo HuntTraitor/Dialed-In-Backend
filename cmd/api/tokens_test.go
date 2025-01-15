@@ -74,5 +74,58 @@ func TestCreateAuthenticationHandler(t *testing.T) {
 			}
 		})
 	}
+}
 
+func TestCreatePasswordResetHandler(t *testing.T) {
+	app := newTestApplication()
+	ts := newTestServer(app.routes())
+	defer ts.Close()
+
+	tests := []struct {
+		name               string
+		payload            string
+		expectedStatusCode int
+		expectedWrapper    string
+		expectedResponse   map[string]any
+	}{
+		{
+			name:               "Successfully sends password resest",
+			payload:            `{"email": "test@example.com"}`,
+			expectedStatusCode: http.StatusCreated,
+			expectedWrapper:    "",
+			expectedResponse: map[string]any{
+				"message": "an email will be sent to you containing password reset instructions",
+			},
+		},
+		{
+			name:               "incorrect email won't send password reset",
+			payload:            `{"email": "notfound@example.com"}`,
+			expectedStatusCode: http.StatusUnprocessableEntity,
+			expectedWrapper:    "error",
+			expectedResponse: map[string]any{
+				"error": map[string]any{
+					"email": "no matching email address found",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			statusCode, _, returnedBody := ts.post(t, "/v1/tokens/password-reset", strings.NewReader(tt.payload))
+			assert.Equal(t, tt.expectedStatusCode, statusCode)
+			var body map[string]any
+			err := json.Unmarshal([]byte(returnedBody), &body)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if tt.expectedWrapper == "error" {
+				errorMessage := body[tt.expectedWrapper].(map[string]any)
+				assert.Equal(t, tt.expectedResponse["error"], errorMessage)
+			} else {
+				assert.Equal(t, tt.expectedResponse["message"], body["message"])
+			}
+		})
+	}
 }
