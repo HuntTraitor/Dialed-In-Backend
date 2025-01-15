@@ -307,3 +307,65 @@ func TestVerifyUser(t *testing.T) {
 		})
 	}
 }
+
+func TestResetPassword(t *testing.T) {
+	cleanup, _, err := LaunchTestProgram(port)
+	if err != nil {
+		t.Fatalf("failed to launch test program: %v", err)
+	}
+	t.Cleanup(cleanup)
+
+	_ = createUser(t)
+
+	t.Run("Succesfully Resets Password", func(t *testing.T) {
+
+		// Check that you can log in with the old password
+		requestURL := fmt.Sprintf("http://localhost:%d/v1/tokens/authentication", 3001)
+		requestBody := `{"email": "test@example.com", "password": "password"}`
+		statusCode, _, returnedBody := post(t, requestURL, strings.NewReader(requestBody))
+		assert.Equal(t, http.StatusCreated, statusCode)
+
+		// Send the request to reset
+		requestURL = fmt.Sprintf("http://localhost:%d/v1/tokens/password-reset", 3001)
+		requestBody = `{"email": "test@example.com"}`
+
+		statusCode, _, returnedBody = post(t, requestURL, strings.NewReader(requestBody))
+		expectedResponse := map[string]any{
+			"message": "an email will be sent to you containing password reset instructions",
+		}
+
+		assert.Equal(t, http.StatusCreated, statusCode)
+		assert.Equal(t, expectedResponse, returnedBody)
+
+		// Get the reset token from the email
+		var token string
+		waitFor(t, func() bool {
+			body, _ := getEmail(t, "containing", "your%20new%20password")
+			token = extractToken(t, body)
+			return token != ""
+		})
+
+		// Send a request to the reset password
+		requestURL = fmt.Sprintf("http://localhost:%d/v1/users/password", 3001)
+		requestBody = fmt.Sprintf(`{"password": "password2", "token": "%s"}`, token)
+
+		statusCode, _, returnedBody = put(t, requestURL, strings.NewReader(requestBody))
+		assert.Equal(t, http.StatusOK, statusCode)
+		expectedResponse = map[string]any{
+			"message": "your password was successfully reset",
+		}
+		assert.Equal(t, expectedResponse, returnedBody)
+
+		// Check that you cannot log in with the old password
+		requestURL = fmt.Sprintf("http://localhost:%d/v1/tokens/authentication", 3001)
+		requestBody = `{"email": "test@example.com", "password": "password"}`
+		statusCode, _, returnedBody = post(t, requestURL, strings.NewReader(requestBody))
+		assert.Equal(t, http.StatusUnauthorized, statusCode)
+
+		//Check that you can log in with the new password
+		requestURL = fmt.Sprintf("http://localhost:%d/v1/tokens/authentication", 3001)
+		requestBody = `{"email": "test@example.com", "password": "password2"}`
+		statusCode, _, returnedBody = post(t, requestURL, strings.NewReader(requestBody))
+		assert.Equal(t, http.StatusCreated, statusCode)
+	})
+}
