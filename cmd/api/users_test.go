@@ -284,3 +284,69 @@ func TestVerifyUser(t *testing.T) {
 		})
 	}
 }
+
+func TestUpdateUserPasswordHandler(t *testing.T) {
+	app := newTestApplication()
+	ts := newTestServer(app.routes())
+	defer ts.Close()
+	tests := []struct {
+		name               string
+		payload            string
+		expectedStatusCode int
+		expectedWrapper    string
+		expectedResponse   map[string]any
+	}{
+		{
+			name:               "Successfully resets password",
+			payload:            `{"password": "newpassword", "token": "ASDJKLEPOIURERFJDKSLAIEJG1"}`,
+			expectedStatusCode: http.StatusOK,
+			expectedWrapper:    "",
+			expectedResponse: map[string]any{
+				"message": "your password was successfully reset",
+			},
+		},
+		{
+			name:               "invalid password gets rejected",
+			payload:            `{"password": "123", "token": "ASDJKLEPOIURERFJDKSLAIEJG1"}`,
+			expectedStatusCode: http.StatusUnprocessableEntity,
+			expectedWrapper:    "error",
+			expectedResponse: map[string]any{
+				"error": map[string]any{
+					"password": "must be at least 8 bytes long",
+				},
+			},
+		},
+		{
+			name:               "invalid token gets rejected",
+			payload:            `{"password": "newpassword", "token": "ASDJKLEPOIURERFJDKSLAIEJG2"}`,
+			expectedStatusCode: http.StatusUnprocessableEntity,
+			expectedWrapper:    "error",
+			expectedResponse: map[string]any{
+				"error": map[string]any{
+					"token": "invalid or expired password reset token",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			statusCode, _, returnedBody := ts.put(t, "/v1/users/password", strings.NewReader(tt.payload))
+			assert.Equal(t, tt.expectedStatusCode, statusCode)
+			var body map[string]any
+			err := json.Unmarshal([]byte(returnedBody), &body)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if tt.expectedWrapper == "" {
+				assert.Contains(t, body["message"], tt.expectedResponse["message"])
+			} else {
+				actualContent := body[tt.expectedWrapper].(map[string]any)
+				expectedContent := tt.expectedResponse[tt.expectedWrapper].(map[string]any)
+				for k, v := range actualContent {
+					assert.Equal(t, expectedContent[k], v)
+				}
+			}
+		})
+	}
+}
