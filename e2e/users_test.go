@@ -322,14 +322,14 @@ func TestResetPassword(t *testing.T) {
 		// Check that you can log in with the old password
 		requestURL := fmt.Sprintf("http://localhost:%d/v1/tokens/authentication", 3001)
 		requestBody := `{"email": "test@example.com", "password": "password"}`
-		statusCode, _, returnedBody := post(t, requestURL, strings.NewReader(requestBody))
+		statusCode, _, _ := post(t, requestURL, strings.NewReader(requestBody))
 		assert.Equal(t, http.StatusCreated, statusCode)
 
 		// Send the request to reset
 		requestURL = fmt.Sprintf("http://localhost:%d/v1/tokens/password-reset", 3001)
 		requestBody = `{"email": "test@example.com"}`
 
-		statusCode, _, returnedBody = post(t, requestURL, strings.NewReader(requestBody))
+		statusCode, _, returnedBody := post(t, requestURL, strings.NewReader(requestBody))
 		expectedResponse := map[string]any{
 			"message": "an email will be sent to you containing password reset instructions",
 		}
@@ -359,13 +359,13 @@ func TestResetPassword(t *testing.T) {
 		// Check that you cannot log in with the old password
 		requestURL = fmt.Sprintf("http://localhost:%d/v1/tokens/authentication", 3001)
 		requestBody = `{"email": "test@example.com", "password": "password"}`
-		statusCode, _, returnedBody = post(t, requestURL, strings.NewReader(requestBody))
+		statusCode, _, _ = post(t, requestURL, strings.NewReader(requestBody))
 		assert.Equal(t, http.StatusUnauthorized, statusCode)
 
 		//Check that you can log in with the new password
 		requestURL = fmt.Sprintf("http://localhost:%d/v1/tokens/authentication", 3001)
 		requestBody = `{"email": "test@example.com", "password": "password2"}`
-		statusCode, _, returnedBody = post(t, requestURL, strings.NewReader(requestBody))
+		statusCode, _, _ = post(t, requestURL, strings.NewReader(requestBody))
 		assert.Equal(t, http.StatusCreated, statusCode)
 	})
 }
