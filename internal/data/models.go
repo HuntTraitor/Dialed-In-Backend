@@ -11,8 +11,9 @@ var (
 )
 
 type Models struct {
-	Users  UserModelInterface
-	Tokens TokenModelInterface
+	Users   UserModelInterface
+	Tokens  TokenModelInterface
+	Methods MethodModelInterface
 }
 
 // NewModels returns models associated with a real database
