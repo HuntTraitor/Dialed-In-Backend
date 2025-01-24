@@ -19,7 +19,8 @@ type Models struct {
 // NewModels returns models associated with a real database
 func NewModels(db *sql.DB) Models {
 	return Models{
-		Users:  UserModel{DB: db},
-		Tokens: TokenModel{DB: db},
+		Users:   UserModel{DB: db},
+		Tokens:  TokenModel{DB: db},
+		Methods: MethodModel{DB: db},
 	}
 }

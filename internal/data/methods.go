@@ -33,7 +33,7 @@ func (m MethodModel) GetAll() ([]*Method, error) {
 
 	defer rows.Close()
 
-	var methods []*Method
+	methods := []*Method{}
 
 	for rows.Next() {
 		var method Method
