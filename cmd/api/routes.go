@@ -29,6 +29,9 @@ func (app *application) routes() http.Handler {
 	// Token Routes
 	router.Route("/v1/tokens", app.loadTokenRoutes)
 
+	// Method Routes
+	router.Route("/v1/methods", app.loadMethodRoutes)
+
 	router.Route("/debug", app.loadDebugRoutes)
 
 	return router
@@ -54,4 +57,8 @@ func (app *application) loadDebugRoutes(router chi.Router) {
 	router.Get("/vars", func(w http.ResponseWriter, r *http.Request) {
 		expvar.Handler().ServeHTTP(w, r)
 	})
+}
+
+func (app *application) loadMethodRoutes(router chi.Router) {
+	router.Get("/", app.listMethodsHandler)
 }
