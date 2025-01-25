@@ -7,10 +7,10 @@ import (
 )
 
 type Method struct {
-	ID        int64     `json:"id"`
-	Name      string    `json:"name"`
-	Img       string    `json:"img"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	Img       string `json:"img"`
+	CreatedAt string `json:"created_at"`
 }
 
 type MethodModel struct {
@@ -53,7 +53,5 @@ func (m MethodModel) GetAll() ([]*Method, error) {
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-
 	return methods, nil
-
 }
