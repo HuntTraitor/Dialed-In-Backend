@@ -32,7 +32,7 @@ build:
 ## seed: seeds the database
 .PHONY: seed
 seed:
-	@go run cmd/seed/main.go
+	@docker compose exec -T db psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /tmp/seeds.sql
 
 ## db-stats: checks the status of the database to see if you are connected
 .PHONY: db-status

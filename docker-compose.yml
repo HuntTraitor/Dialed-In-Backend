@@ -40,6 +40,7 @@ services:
       - '5432:5432'
     volumes:
       - ./db/sql/databases.sql:/docker-entrypoint-initdb.d/1.databases.sql
+      - ./db/sql/seeds.sql:/tmp/seeds.sql
 
   mailhog:
     image: mailhog/mailhog:latest
