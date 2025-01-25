@@ -40,9 +40,9 @@ func (m MethodModel) GetAll() ([]*Method, error) {
 
 		err = rows.Scan(
 			&method.ID,
+			&method.CreatedAt,
 			&method.Name,
 			&method.Img,
-			&method.CreatedAt,
 		)
 		if err != nil {
 			return nil, err

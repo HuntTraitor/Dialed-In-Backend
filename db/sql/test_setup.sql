@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS methods (
     created_at timestamp(0) with time zone NOT NULL DEFAULT NOW(),
     name text NOT NULL,
     img text NOT NULL
-)
+);
 
 INSERT INTO methods (name, img) VALUES
 ('Pour Over', 'https://example.com/images/pour_over.png'),
