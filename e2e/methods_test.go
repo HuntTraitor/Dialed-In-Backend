@@ -51,7 +51,6 @@ func TestGetAllMethods(t *testing.T) {
 			}
 			assert.Equal(t, tt.expectedStatusCode, statusCode)
 			methods := body["methods"].([]any)
-			// TODO add seeds to test database script for e2e tests.
 			for i, item := range methods {
 				method := item.(map[string]any)
 				assert.Equal(t, tt.expectedMethods[i].Name, method["name"])
