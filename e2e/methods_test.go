@@ -27,14 +27,14 @@ func TestGetAllMethods(t *testing.T) {
 			expectedMethods: []data.Method{
 				{
 					ID:        1,
-					Name:      "Mock Method 1",
-					Img:       "https://example.com/img1.png",
+					Name:      "Pour Over",
+					Img:       "https://www.lacolombe.com/cdn/shop/products/BrewMerch_Holiday2238166_2.jpg?v=1736688225",
 					CreatedAt: "2025-01-25 00:28:23 +00:00",
 				},
 				{
 					ID:        2,
-					Name:      "Mock Method 2",
-					Img:       "https://example.com/img2.png",
+					Name:      "Hario Switch",
+					Img:       "https://www.hario-canada.ca/cdn/shop/products/hario_ssd-200-b-v60-02-switch-immersion-dripper_pouring_1024x1024.jpg?v=1672852353",
 					CreatedAt: "2025-01-25 00:28:23 +00:00",
 				},
 			},

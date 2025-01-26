@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"github.com/joho/godotenv"
 	"github.com/pressly/goose/v3"
+	"log"
 	"math/rand"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -42,6 +44,13 @@ func LaunchTestProgram(port string) (cleanup func(), sendInterrupt func() error,
 	if err := goose.Up(db, "../db/migrations"); err != nil {
 		db.Close()
 		fmt.Println("Failed to up migrations:", err)
+		os.Exit(1)
+	}
+
+	err = runSeeds(os.Getenv("TEST_DATABASE_URL"), "../db/sql/seeds.sql")
+	if err != nil {
+		db.Close()
+		fmt.Println("Failed to run seeds:", err)
 		os.Exit(1)
 	}
 
@@ -153,4 +162,34 @@ func randomString(n int) string {
 
 func makeExecutable(filePath string) error {
 	return os.Chmod(filePath, 0755) // Grant execute permissions
+}
+
+func runSeeds(databaseURL string, seedsFilePath string) error {
+	db, err := sql.Open("postgres", databaseURL)
+	if err != nil {
+		return fmt.Errorf("failed to connect to the database: %w", err)
+	}
+	defer db.Close()
+
+	seedData, err := os.ReadFile(seedsFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to read seeds file: %w", err)
+	}
+
+	seedStatements := strings.Split(string(seedData), ";")
+
+	for _, stmt := range seedStatements {
+		trimmedStmt := strings.TrimSpace(stmt)
+		if trimmedStmt == "" {
+			continue
+		}
+
+		_, err = db.Exec(trimmedStmt)
+		if err != nil {
+			return fmt.Errorf("failed to execute statement: %s, error: %w", trimmedStmt, err)
+		}
+	}
+
+	log.Println("Seeding completed successfully.")
+	return nil
 }
