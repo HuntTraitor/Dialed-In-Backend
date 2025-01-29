@@ -32,6 +32,9 @@ func (app *application) routes() http.Handler {
 	// Method Routes
 	router.Route("/v1/methods", app.loadMethodRoutes)
 
+	// Coffee Routes
+	router.Route("/v1/coffees", app.loadCoffeeRoutes)
+
 	router.Route("/debug", app.loadDebugRoutes)
 
 	return router
@@ -61,4 +64,8 @@ func (app *application) loadDebugRoutes(router chi.Router) {
 
 func (app *application) loadMethodRoutes(router chi.Router) {
 	router.Get("/", app.listMethodsHandler)
+}
+
+func (app *application) loadCoffeeRoutes(router chi.Router) {
+	router.With(app.requireAuthenticatedUser).Get("/", app.listCoffeesHandler)
 }
