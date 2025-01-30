@@ -171,12 +171,12 @@ func createUser(t *testing.T) map[string]any {
 }
 
 // authenticateUser authenticates the user and returns the token
-func authenticateUser(t *testing.T) map[string]any {
+func authenticateUser(t *testing.T, email string, password string) map[string]any {
 	t.Helper()
-	payload := `{
-				"email": "test@example.com",
-				"password": "password"
-			}`
+	payload := fmt.Sprintf(`{
+		"email": "%s",
+		"password": "%s"
+	}`, email, password)
 	requestURL := fmt.Sprintf("http://localhost:%d/v1/tokens/authentication", 3001)
 	_, _, body := post(t, requestURL, strings.NewReader(payload))
 	return body

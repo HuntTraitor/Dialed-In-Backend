@@ -234,7 +234,7 @@ func TestVerifyUser(t *testing.T) {
 
 	_ = createUser(t)
 
-	resp := authenticateUser(t)
+	resp := authenticateUser(t, "test@example.com", "password")
 
 	token := resp["authentication_token"].(map[string]any)["token"].(string)
 
