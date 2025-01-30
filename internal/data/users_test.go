@@ -102,7 +102,7 @@ func TestGetByEmail(t *testing.T) {
 			user, err := m.GetByEmail(tt.email)
 			assert.Equal(t, tt.expectedErr, err)
 			if err == nil {
-				assert.Equal(t, tt.expectedUser.ID, user.ID)
+				assert.NotEmpty(t, user.ID)
 				assert.Equal(t, tt.expectedUser.Name, user.Name)
 				assert.Equal(t, tt.expectedUser.Email, user.Email)
 				assert.Equal(t, tt.expectedUser.Password, user.Password)

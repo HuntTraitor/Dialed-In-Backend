@@ -100,7 +100,7 @@ func TestNewToken(t *testing.T) {
 		},
 		{
 			name:          "Wont insert token on no associated user id",
-			userID:        2,
+			userID:        200,
 			ttl:           5 * time.Minute,
 			scope:         "scope",
 			expectedToken: nil,
