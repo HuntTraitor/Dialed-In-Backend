@@ -25,3 +25,14 @@ func (m MockCoffeeModel) GetAllForUser(userID int64) ([]*data.Coffee, error) {
 	}
 	return mockCoffees, nil
 }
+
+func (m MockCoffeeModel) Insert(userID int64, coffee *data.Coffee) (*data.Coffee, error) {
+	return &data.Coffee{
+		ID:          1,
+		UserID:      2,
+		Name:        "Inserted Coffee",
+		Region:      "Inserted Region",
+		CreatedAt:   "Inserted Created At",
+		Description: "Inserted description",
+	}, nil
+}
