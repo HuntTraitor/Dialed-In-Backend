@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"database/sql"
+	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"time"
 )
 
@@ -22,6 +23,17 @@ type CoffeeModel struct {
 
 type CoffeeModelInterface interface {
 	GetAllForUser(userID int64) ([]*Coffee, error)
+	Insert(userID int64, coffee *Coffee) (*Coffee, error)
+}
+
+func ValidateCoffee(v *validator.Validator, coffee *Coffee) {
+	v.Check(coffee.Name != "", "name", "must be provided")
+	v.Check(coffee.Description != "", "description", "must be provided")
+	v.Check(coffee.Region != "", "region", "must be provided")
+	v.Check(len(coffee.Name) <= 500, "name", "must not be more than 500 bytes long")
+	v.Check(len(coffee.Description) <= 1000, "description", "must not be more than 500 bytes long")
+	v.Check(len(coffee.Region) <= 100, "region", "must not be more than 100 bytes long")
+	// TODO add a check to make sure the img is a proper url
 }
 
 func (m CoffeeModel) GetAllForUser(userID int64) ([]*Coffee, error) {
@@ -60,4 +72,29 @@ func (m CoffeeModel) GetAllForUser(userID int64) ([]*Coffee, error) {
 		return nil, err
 	}
 	return coffees, nil
+}
+
+func (m CoffeeModel) Insert(userID int64, coffee *Coffee) (*Coffee, error) {
+	query := `INSERT INTO coffees (user_id, name, region, img, description) VALUES ($1, $2, $3, $4, $5) RETURNING *`
+
+	args := []any{userID, coffee.Name, coffee.Region, coffee.Img, coffee.Description}
+
+	var returnedCoffee Coffee
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := m.DB.QueryRowContext(ctx, query, args...).Scan(
+		&returnedCoffee.ID,
+		&returnedCoffee.UserID,
+		&returnedCoffee.CreatedAt,
+		&returnedCoffee.Name,
+		&returnedCoffee.Region,
+		&returnedCoffee.Img,
+		&returnedCoffee.Description)
+
+	if err != nil {
+		return nil, err
+	}
+	return &returnedCoffee, nil
 }
