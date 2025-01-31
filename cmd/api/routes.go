@@ -68,4 +68,5 @@ func (app *application) loadMethodRoutes(router chi.Router) {
 
 func (app *application) loadCoffeeRoutes(router chi.Router) {
 	router.With(app.requireAuthenticatedUser).Get("/", app.listCoffeesHandler)
+	router.With(app.requireAuthenticatedUser).Post("/", app.createCoffeeHandler)
 }
