@@ -85,3 +85,48 @@ func TestEmailRegex(t *testing.T) {
 		})
 	}
 }
+
+func TestUrlRegex(t *testing.T) {
+	tests := []struct {
+		name  string
+		url   string
+		valid bool
+	}{
+		{
+			name:  "https://example.com - Valid",
+			url:   "https://example.com",
+			valid: true,
+		},
+		{
+			name:  "http://example.com - Valid",
+			url:   "http://example.com",
+			valid: true,
+		},
+		{
+			name:  "https://examplecom - Invalid",
+			url:   "https://examplecom",
+			valid: false,
+		},
+		{
+			name:  "https:/example.com - Invalid",
+			url:   "https:/example.com",
+			valid: false,
+		},
+		{
+			name:  "Empty - Invalid",
+			url:   "",
+			valid: false,
+		},
+		{
+			name:  "example - Invalid",
+			url:   "example",
+			valid: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.valid, Matches(tt.url, UrlRX))
+		})
+	}
+}
