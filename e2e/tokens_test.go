@@ -70,7 +70,7 @@ func TestAuthenticateUser(t *testing.T) {
 			_ = activateUser(t, token)
 
 			requestURL := fmt.Sprintf("http://localhost:%d/v1/tokens/authentication", 3001)
-			statusCode, _, body := post(t, requestURL, strings.NewReader(tt.payload))
+			statusCode, _, body := post(t, requestURL, strings.NewReader(tt.payload), nil)
 			assert.Equal(t, tt.expectedStatusCode, statusCode)
 			if tt.expectedWrapper == "authentication_token" {
 				actualContent := body[tt.expectedWrapper].(map[string]any)

@@ -13,10 +13,14 @@ import (
 )
 
 // post takes an url and body and returns a status code, headers, and a json body
-func post(t *testing.T, url string, body io.Reader) (int, http.Header, map[string]any) {
+func post(t *testing.T, url string, body io.Reader, headers map[string]string) (int, http.Header, map[string]any) {
 	req, err := http.NewRequest(http.MethodPost, url, body)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	for key, value := range headers {
+		req.Header.Set(key, value)
 	}
 
 	res, err := http.DefaultClient.Do(req)
@@ -166,7 +170,7 @@ func createUser(t *testing.T) map[string]any {
 				"password": "password"
 			}`
 	requestURL := fmt.Sprintf("http://localhost:%d/v1/users", 3001)
-	_, _, body := post(t, requestURL, strings.NewReader(payload))
+	_, _, body := post(t, requestURL, strings.NewReader(payload), nil)
 	return body
 }
 
@@ -178,7 +182,7 @@ func authenticateUser(t *testing.T, email string, password string) map[string]an
 		"password": "%s"
 	}`, email, password)
 	requestURL := fmt.Sprintf("http://localhost:%d/v1/tokens/authentication", 3001)
-	_, _, body := post(t, requestURL, strings.NewReader(payload))
+	_, _, body := post(t, requestURL, strings.NewReader(payload), nil)
 	return body
 }
 

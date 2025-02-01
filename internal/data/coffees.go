@@ -31,8 +31,9 @@ func ValidateCoffee(v *validator.Validator, coffee *Coffee) {
 	v.Check(coffee.Description != "", "description", "must be provided")
 	v.Check(coffee.Region != "", "region", "must be provided")
 	v.Check(len(coffee.Name) <= 500, "name", "must not be more than 500 bytes long")
-	v.Check(len(coffee.Description) <= 1000, "description", "must not be more than 500 bytes long")
+	v.Check(len(coffee.Description) <= 1000, "description", "must not be more than 1000 bytes long")
 	v.Check(len(coffee.Region) <= 100, "region", "must not be more than 100 bytes long")
+	v.Check(len(coffee.Img) <= 8192, "img", "must not be more than 8192 bytes long")
 	if coffee.Img != "" {
 		v.Check(validator.Matches(coffee.Img, validator.UrlRX), "img", "must be a valid image URL")
 	}
