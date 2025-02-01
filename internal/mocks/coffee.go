@@ -37,7 +37,7 @@ func (m MockCoffeeModel) Insert(userID int64, coffee *data.Coffee) (*data.Coffee
 	}, nil
 }
 
-func (m MockCoffeeModel) GetOne(id int64) (*data.Coffee, error) {
+func (m MockCoffeeModel) GetOne(id int64, userId int64) (*data.Coffee, error) {
 	return &data.Coffee{
 		ID:          1,
 		UserID:      2,

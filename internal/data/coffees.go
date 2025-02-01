@@ -24,7 +24,7 @@ type CoffeeModel struct {
 type CoffeeModelInterface interface {
 	GetAllForUser(userID int64) ([]*Coffee, error)
 	Insert(userID int64, coffee *Coffee) (*Coffee, error)
-	GetOne(id int64) (*Coffee, error)
+	GetOne(id int64, userId int64) (*Coffee, error)
 }
 
 func ValidateCoffee(v *validator.Validator, coffee *Coffee) {
@@ -103,12 +103,17 @@ func (m CoffeeModel) Insert(userID int64, coffee *Coffee) (*Coffee, error) {
 	return &returnedCoffee, nil
 }
 
-func (m CoffeeModel) GetOne(id int64) (*Coffee, error) {
-	query := `SELECT * FROM coffees WHERE id = $1`
+func (m CoffeeModel) GetOne(id int64, userId int64) (*Coffee, error) {
+
+	if id < 1 {
+		return nil, ErrRecordNotFound
+	}
+
+	query := `SELECT * FROM coffees WHERE id = $1 AND user_id = $2`
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	var coffee Coffee
-	err := m.DB.QueryRowContext(ctx, query, id).Scan(
+	err := m.DB.QueryRowContext(ctx, query, id, userId).Scan(
 		&coffee.ID,
 		&coffee.UserID,
 		&coffee.CreatedAt,
@@ -118,7 +123,12 @@ func (m CoffeeModel) GetOne(id int64) (*Coffee, error) {
 		&coffee.Description,
 	)
 	if err != nil {
-		return nil, err
+		switch err {
+		case sql.ErrNoRows:
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
 	}
 	return &coffee, nil
 }
