@@ -69,14 +69,6 @@ func TestGetAllCoffees(t *testing.T) {
 }
 
 func TestPostCoffee(t *testing.T) {
-	// Test1: Successful post
-	// Test2: Missing parameters
-	// Test3: name is too long
-	// Test6: region is too long
-	// Test4: description is too long
-	// Test5: img is not a url
-	// Test6: Unauthenticated post
-
 	cleanup, _, err := LaunchTestProgram(port)
 	if err != nil {
 		t.Fatalf("failed to launch test program: %v", err)
@@ -205,7 +197,6 @@ func TestPostCoffee(t *testing.T) {
 			assert.Equal(t, tt.expectedStatusCode, statusCode)
 
 			if tt.expectedError == nil {
-				fmt.Println(returnedBody)
 				returnedCoffee := returnedBody["coffee"].(map[string]any)
 				assert.Equal(t, tt.expectedResponse["name"], returnedCoffee["name"])
 				assert.Equal(t, tt.expectedResponse["region"], returnedCoffee["region"])
@@ -215,7 +206,6 @@ func TestPostCoffee(t *testing.T) {
 				assert.NotEmpty(t, returnedCoffee["user_id"])
 				assert.NotEmpty(t, returnedCoffee["created_at"])
 			} else {
-				fmt.Println("hello?")
 				returnedError := returnedBody["error"].(map[string]any)
 				assert.Equal(t, tt.expectedError, returnedError)
 			}

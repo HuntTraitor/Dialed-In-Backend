@@ -23,6 +23,9 @@ const (
 // LaunchTestProgram launches the testing server from a built binary
 func LaunchTestProgram(port string) (cleanup func(), sendInterrupt func() error, err error) {
 
+	// Suppress output to reduce clutter in CI
+	suppressOutput()
+
 	err = godotenv.Load("../.env")
 	if err != nil {
 		fmt.Println("Error loading .env file:", err)
@@ -41,7 +44,7 @@ func LaunchTestProgram(port string) (cleanup func(), sendInterrupt func() error,
 		os.Exit(1)
 	}
 
-	if err := goose.Up(db, "../db/migrations"); err != nil {
+	if err = goose.Up(db, "../db/migrations"); err != nil {
 		db.Close()
 		fmt.Println("Failed to up migrations:", err)
 		os.Exit(1)
@@ -83,7 +86,7 @@ func runServer(binName string, port string) (sendInterrupt func() error, kill fu
 
 	cmdPath := filepath.Join(dir, binName)
 
-	if err := makeExecutable(cmdPath); err != nil {
+	if err = makeExecutable(cmdPath); err != nil {
 		fmt.Println("Failed to make binary executable:", err)
 		os.Exit(1)
 	}
@@ -101,7 +104,13 @@ func runServer(binName string, port string) (sendInterrupt func() error, kill fu
 		"-metrics=true",
 	)
 
-	cmd.Stdout = os.Stdout
+	// Open /dev/null as an os.File to use as io.Writer
+	devNull, err := os.OpenFile("/dev/null", os.O_RDWR, 0666)
+	if err != nil {
+		panic(err)
+	}
+
+	cmd.Stdout = devNull
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
 		return nil, nil, fmt.Errorf("cannot run temp converter: %s", err)
@@ -192,4 +201,17 @@ func runSeeds(databaseURL string, seedsFilePath string) error {
 
 	log.Println("Seeding completed successfully.")
 	return nil
+}
+
+func suppressOutput() {
+	// Open /dev/null to suppress output
+	devNull, err := os.OpenFile("/dev/null", os.O_RDWR, 0666)
+	if err != nil {
+		panic(err)
+	}
+	os.Stdout = devNull
+	os.Stderr = devNull
+
+	// Suppress logging by replacing the default logger
+	log.SetOutput(devNull)
 }
