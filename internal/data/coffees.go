@@ -33,7 +33,9 @@ func ValidateCoffee(v *validator.Validator, coffee *Coffee) {
 	v.Check(len(coffee.Name) <= 500, "name", "must not be more than 500 bytes long")
 	v.Check(len(coffee.Description) <= 1000, "description", "must not be more than 500 bytes long")
 	v.Check(len(coffee.Region) <= 100, "region", "must not be more than 100 bytes long")
-	// TODO add a check to make sure the img is a proper url
+	if coffee.Img != "" {
+		v.Check(validator.Matches(coffee.Img, validator.UrlRX), "img", "must be a valid image URL")
+	}
 }
 
 func (m CoffeeModel) GetAllForUser(userID int64) ([]*Coffee, error) {
