@@ -223,6 +223,16 @@ func TestPostCoffee(t *testing.T) {
 		})
 	}
 
-	// TODO Run an unauthenticated test
-
+	t.Run("Unauthenticated call response when an error", func(t *testing.T) {
+		requestURL := fmt.Sprintf("http://localhost:%d/v1/coffees", 3001)
+		payload := `{
+				"name": "Blueberry Boom",
+				"region": "Ethiopia",
+				"img": "https://st.kofio.co/img_product/boeV9yxzHn2OwWv/9626/sq_350_DisfG6edTXbtaYponjRQ_102573.png",
+				"description": "This is a delicious blueberry coffee :)"
+			}`
+		statusCode, _, returnedBody := post(t, requestURL, strings.NewReader(payload), nil)
+		assert.Equal(t, http.StatusUnauthorized, statusCode)
+		assert.Equal(t, "you must be authenticated to access this resource", returnedBody["error"])
+	})
 }
