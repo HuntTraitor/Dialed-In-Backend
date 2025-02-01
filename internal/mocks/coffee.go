@@ -36,3 +36,14 @@ func (m MockCoffeeModel) Insert(userID int64, coffee *data.Coffee) (*data.Coffee
 		Description: "Inserted description",
 	}, nil
 }
+
+func (m MockCoffeeModel) GetOne(id int64) (*data.Coffee, error) {
+	return &data.Coffee{
+		ID:          1,
+		UserID:      2,
+		Name:        "Mock Coffee",
+		Region:      "Mock Region",
+		CreatedAt:   "Mock Created At",
+		Description: "Mock description",
+	}, nil
+}
