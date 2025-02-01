@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/go-chi/chi/v5"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
-	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
@@ -57,14 +57,13 @@ func TestReadIDParam(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			// Create http parameters with key and value as the ids
-			params := httprouter.Params{
-				httprouter.Param{Key: "id", Value: test.id},
-			}
-			// Create a context that encapsulates these parameters
-			ctx := context.WithValue(context.Background(), httprouter.ParamsKey, params)
 
-			// Create a request using that context
+			// Set up a chi router context and add id to the URL params
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("id", test.id)
+
+			// Set up a request to send to that to the router
+			ctx := context.WithValue(context.Background(), chi.RouteCtxKey, rctx)
 			req := httptest.NewRequest(http.MethodGet, "/", nil).WithContext(ctx)
 
 			id, err := app.readIDParam(req)
