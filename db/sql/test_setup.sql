@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS coffees (
     name text NOT NULL,
     region text,
     img text NOT NULL,
-    description text
+    description text,
+    version int NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS recipes (
@@ -37,7 +38,8 @@ CREATE TABLE IF NOT EXISTS recipes (
     user_id bigint NOT NULL REFERENCES users ON DELETE CASCADE,
     coffee_id bigint NOT NULL REFERENCES coffees ON DELETE CASCADE,
     method_id bigint NOT NULL REFERENCES methods ON DELETE CASCADE,
-    info jsonb
+    info jsonb,
+    version int NOT NULL DEFAULT 1
 );
 
 INSERT INTO users (name, email, password_hash, activated) VALUES

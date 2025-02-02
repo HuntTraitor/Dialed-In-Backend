@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS coffees (
     name text NOT NULL,
     region text,
     img text NOT NULL,
-    description text
+    description text,
+    version int NOT NULL DEFAULT 1
 );
 -- +goose StatementEnd
 

@@ -46,6 +46,7 @@ func TestGetAllCoffees(t *testing.T) {
 			assert.NotEmpty(t, c["created_at"].(string))
 			assert.Equal(t, "Milky Cake", c["name"].(string))
 			assert.Equal(t, "Columbia", c["region"].(string))
+			assert.Equal(t, float64(1), c["version"].(float64))
 			assert.NotEmpty(t, c["img"].(string))
 			assert.NotEmpty(t, c["description"].(string))
 		}
@@ -107,6 +108,7 @@ func TestPostCoffee(t *testing.T) {
 				"img":         "https://st.kofio.co/img_product/boeV9yxzHn2OwWv/9626/sq_350_DisfG6edTXbtaYponjRQ_102573.png",
 				"description": "This is a delicious blueberry coffee :)",
 				"created_at":  "2025-02-01T03:59:07Z",
+				"version":     1,
 			},
 			expectedError: nil,
 		},
@@ -202,6 +204,7 @@ func TestPostCoffee(t *testing.T) {
 				assert.Equal(t, tt.expectedResponse["region"], returnedCoffee["region"])
 				assert.Equal(t, tt.expectedResponse["img"], returnedCoffee["img"])
 				assert.Equal(t, tt.expectedResponse["description"], returnedCoffee["description"])
+				assert.NotEmpty(t, returnedCoffee["version"])
 				assert.NotEmpty(t, returnedCoffee["id"])
 				assert.NotEmpty(t, returnedCoffee["user_id"])
 				assert.NotEmpty(t, returnedCoffee["created_at"])

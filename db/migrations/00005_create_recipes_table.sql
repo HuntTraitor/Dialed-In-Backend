@@ -5,7 +5,8 @@ CREATE TABLE IF NOT EXISTS recipes (
     user_id bigint NOT NULL REFERENCES users ON DELETE CASCADE,
     coffee_id bigint NOT NULL REFERENCES coffees ON DELETE CASCADE,
     method_id bigint NOT NULL REFERENCES methods ON DELETE CASCADE,
-    info jsonb
+    info jsonb,
+    version int NOT NULL DEFAULT 1
 );
 -- +goose StatementEnd
 

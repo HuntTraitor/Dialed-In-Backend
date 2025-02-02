@@ -13,6 +13,7 @@ func (m MockCoffeeModel) GetAllForUser(userID int64) ([]*data.Coffee, error) {
 			Region:      "Region 1",
 			Img:         "www.example.com",
 			Description: "Example Description",
+			Version:     1,
 		},
 		{
 			ID:          2,
@@ -21,6 +22,7 @@ func (m MockCoffeeModel) GetAllForUser(userID int64) ([]*data.Coffee, error) {
 			Region:      "Region 2",
 			Img:         "www.example.com",
 			Description: "Example Description",
+			Version:     1,
 		},
 	}
 	return mockCoffees, nil
@@ -34,6 +36,7 @@ func (m MockCoffeeModel) Insert(userID int64, coffee *data.Coffee) (*data.Coffee
 		Region:      "Inserted Region",
 		CreatedAt:   "Inserted Created At",
 		Description: "Inserted description",
+		Version:     1,
 	}, nil
 }
 
@@ -45,5 +48,8 @@ func (m MockCoffeeModel) GetOne(id int64, userId int64) (*data.Coffee, error) {
 		Region:      "Mock Region",
 		CreatedAt:   "Mock Created At",
 		Description: "Mock description",
+		Version:     1,
+	}, nil
+}
 	}, nil
 }

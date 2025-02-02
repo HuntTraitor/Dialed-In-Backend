@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"time"
 )
@@ -15,6 +16,7 @@ type Coffee struct {
 	Img         string `json:"img"`
 	Description string `json:"description"`
 	CreatedAt   string `json:"created_at"`
+	Version     int    `json:"version"`
 }
 
 type CoffeeModel struct {
@@ -25,6 +27,7 @@ type CoffeeModelInterface interface {
 	GetAllForUser(userID int64) ([]*Coffee, error)
 	Insert(userID int64, coffee *Coffee) (*Coffee, error)
 	GetOne(id int64, userId int64) (*Coffee, error)
+	Update(coffee *Coffee) (*Coffee, error)
 }
 
 func ValidateCoffee(v *validator.Validator, coffee *Coffee) {
@@ -65,6 +68,7 @@ func (m CoffeeModel) GetAllForUser(userID int64) ([]*Coffee, error) {
 			&coffee.Region,
 			&coffee.Img,
 			&coffee.Description,
+			&coffee.Version,
 		)
 		if err != nil {
 			return nil, err
@@ -95,7 +99,8 @@ func (m CoffeeModel) Insert(userID int64, coffee *Coffee) (*Coffee, error) {
 		&returnedCoffee.Name,
 		&returnedCoffee.Region,
 		&returnedCoffee.Img,
-		&returnedCoffee.Description)
+		&returnedCoffee.Description,
+		&returnedCoffee.Version)
 
 	if err != nil {
 		return nil, err
@@ -105,7 +110,7 @@ func (m CoffeeModel) Insert(userID int64, coffee *Coffee) (*Coffee, error) {
 
 func (m CoffeeModel) GetOne(id int64, userId int64) (*Coffee, error) {
 
-	if id < 1 {
+	if id < 1 || userId < 1 {
 		return nil, ErrRecordNotFound
 	}
 
@@ -121,10 +126,11 @@ func (m CoffeeModel) GetOne(id int64, userId int64) (*Coffee, error) {
 		&coffee.Region,
 		&coffee.Img,
 		&coffee.Description,
+		&coffee.Version,
 	)
 	if err != nil {
-		switch err {
-		case sql.ErrNoRows:
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
 			return nil, ErrRecordNotFound
 		default:
 			return nil, err
