@@ -86,3 +86,76 @@ func (app *application) getCoffeeHandler(w http.ResponseWriter, r *http.Request)
 		app.serverErrorResponse(w, r, err)
 	}
 }
+
+func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Request) {
+	user := app.contextGetUser(r)
+	id, err := app.readIDParam(r)
+	if err != nil {
+		app.notFoundResponse(w, r)
+		return
+	}
+
+	// get the coffee we need to update
+	coffee, err := app.models.Coffees.GetOne(id, user.ID)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	var input struct {
+		Name        *string `json:"name"`
+		Region      *string `json:"region"`
+		Img         *string `json:"img"`
+		Description *string `json:"description"`
+	}
+
+	err = app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	// update the fields
+	if input.Name != nil {
+		coffee.Name = *input.Name
+	}
+	if input.Region != nil {
+		coffee.Region = *input.Region
+	}
+	if input.Img != nil {
+		coffee.Img = *input.Img
+	}
+	if input.Description != nil {
+		coffee.Description = *input.Description
+	}
+
+	// validate the new coffee struct
+	v := validator.New()
+	if data.ValidateCoffee(v, coffee); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	// update the new coffee model in the database
+	err = app.models.Coffees.Update(coffee)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.editConflictResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	// write the new coffee model to the response
+	err = app.writeJSON(w, http.StatusOK, envelope{"coffee": coffee}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
