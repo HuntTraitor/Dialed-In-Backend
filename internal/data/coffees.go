@@ -27,7 +27,7 @@ type CoffeeModelInterface interface {
 	GetAllForUser(userID int64) ([]*Coffee, error)
 	Insert(userID int64, coffee *Coffee) (*Coffee, error)
 	GetOne(id int64, userId int64) (*Coffee, error)
-	Update(coffee *Coffee) (*Coffee, error)
+	Update(coffee *Coffee) error
 }
 
 func ValidateCoffee(v *validator.Validator, coffee *Coffee) {
@@ -137,4 +137,34 @@ func (m CoffeeModel) GetOne(id int64, userId int64) (*Coffee, error) {
 		}
 	}
 	return &coffee, nil
+}
+
+func (m CoffeeModel) Update(coffee *Coffee) error {
+	query := `UPDATE coffees
+						SET name = $1, region = $2, img = $3, description = $4, version = version + 1
+						WHERE coffees.id = $5 AND version = $6
+						RETURNING version`
+
+	args := []any{
+		coffee.Name,
+		coffee.Region,
+		coffee.Img,
+		coffee.Description,
+		coffee.ID,
+		coffee.Version,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&coffee.Version)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrEditConflict
+		default:
+			return err
+		}
+	}
+	return nil
 }

@@ -51,5 +51,7 @@ func (m MockCoffeeModel) GetOne(id int64, userId int64) (*data.Coffee, error) {
 		Version:     1,
 	}, nil
 }
-	}, nil
+
+func (m MockCoffeeModel) Update(coffee *data.Coffee) error {
+	return nil
 }
