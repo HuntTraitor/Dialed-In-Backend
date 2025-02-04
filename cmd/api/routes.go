@@ -71,4 +71,5 @@ func (app *application) loadCoffeeRoutes(router chi.Router) {
 	router.With(app.requireAuthenticatedUser).Post("/", app.createCoffeeHandler)
 	router.With(app.requireAuthenticatedUser).Get("/{id}", app.getCoffeeHandler)
 	router.With(app.requireAuthenticatedUser).Patch("/{id}", app.updateCoffeeHandler)
+	router.With(app.requireAuthenticatedUser).Delete("/{id}", app.deleteCoffeeHandler)
 }
