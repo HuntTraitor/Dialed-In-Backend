@@ -67,6 +67,36 @@ func put(t *testing.T, url string, body io.Reader) (int, http.Header, map[string
 	return res.StatusCode, res.Header, responseBody
 }
 
+// patch takes a URL and body and returns a status code, headers, and a JSON body
+func patch(t *testing.T, url string, body io.Reader, headers map[string]string) (int, http.Header, map[string]any) {
+	req, err := http.NewRequest(http.MethodPatch, url, body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close() // Ensure the response body is closed
+
+	resBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var responseBody map[string]any
+	err = json.Unmarshal(resBody, &responseBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return res.StatusCode, res.Header, responseBody
+}
+
 // get sends a get request to a certain urlPath with some headers
 func get(t *testing.T, urlPath string, headers map[string]string) (int, http.Header, string) {
 	t.Helper()
