@@ -104,14 +104,8 @@ func runServer(binName string, port string) (sendInterrupt func() error, kill fu
 		"-metrics=true",
 	)
 
-	// Open /dev/null as an os.File to use as io.Writer
-	devNull, err := os.OpenFile("/dev/null", os.O_RDWR, 0666)
-	if err != nil {
-		panic(err)
-	}
-
-	cmd.Stdout = devNull
-	cmd.Stderr = os.Stderr
+	//cmd.Stdout = os.Stdout
+	//cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
 		return nil, nil, fmt.Errorf("cannot run temp converter: %s", err)
 	}
