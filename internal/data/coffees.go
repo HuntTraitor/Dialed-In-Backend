@@ -28,6 +28,7 @@ type CoffeeModelInterface interface {
 	Insert(userID int64, coffee *Coffee) (*Coffee, error)
 	GetOne(id int64, userId int64) (*Coffee, error)
 	Update(coffee *Coffee) error
+	Delete(id int64, userID int64) error
 }
 
 func ValidateCoffee(v *validator.Validator, coffee *Coffee) {
@@ -165,6 +166,32 @@ func (m CoffeeModel) Update(coffee *Coffee) error {
 		default:
 			return err
 		}
+	}
+	return nil
+}
+
+func (m CoffeeModel) Delete(id int64, userID int64) error {
+	if id < 1 || userID < 1 {
+		return ErrRecordNotFound
+	}
+
+	query := `DELETE FROM coffees WHERE id = $1 AND user_id = $2`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	result, err := m.DB.ExecContext(ctx, query, id, userID)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return ErrRecordNotFound
 	}
 	return nil
 }

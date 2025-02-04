@@ -55,3 +55,7 @@ func (m MockCoffeeModel) GetOne(id int64, userId int64) (*data.Coffee, error) {
 func (m MockCoffeeModel) Update(coffee *data.Coffee) error {
 	return nil
 }
+
+func (m MockCoffeeModel) Delete(id int64, userId int64) error {
+	return nil
+}
