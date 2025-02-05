@@ -427,10 +427,6 @@ func TestDeleteCoffee(t *testing.T) {
     "img": "https://st.kofio.co/img_product/boeV9yxzHn2OwWv/9626/sq_350_DisfG6edTXbtaYponjRQ_102573.png",
     "description": "This is a delicious blueberry coffee :)"
 	}`
-	// successfully delete coffee
-	// delete a coffee that doest exist fails
-	// delete a coffee that you dont own fails
-	// delete a coffee unauthorized fails
 
 	t.Run("Successfully deletes a coffee", func(t *testing.T) {
 		// post a new coffee and extract ID
