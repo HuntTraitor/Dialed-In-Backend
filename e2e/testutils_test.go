@@ -128,6 +128,41 @@ func get(t *testing.T, urlPath string, headers map[string]string) (int, http.Hea
 	return rs.StatusCode, rs.Header, string(body)
 }
 
+// delete sends a delete request to a certain urlPath with some headers
+func delete(t *testing.T, urlPath string, headers map[string]string) (int, http.Header, map[string]any) {
+	t.Helper()
+
+	// Create a new DELETE request
+	req, err := http.NewRequest(http.MethodDelete, urlPath, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Add custom headers to the request
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+
+	// Send the request
+	rs, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rs.Body.Close()
+
+	resBody, err := io.ReadAll(rs.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var responseBody map[string]any
+	err = json.Unmarshal(resBody, &responseBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rs.StatusCode, rs.Header, responseBody
+}
+
 // getEmail returns the string version and amount of emails with a kind and query linked to
 // and returns the body and number of emails
 // https://github.com/mailhog/MailHog/blob/master/docs/APIv2/swagger-2.0.yaml
