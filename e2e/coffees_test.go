@@ -410,3 +410,93 @@ func TestUpdateCoffee(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, statusCode)
 	})
 }
+
+func TestDeleteCoffee(t *testing.T) {
+	cleanup, _, err := LaunchTestProgram(port)
+	if err != nil {
+		t.Fatalf("failed to launch test program: %v", err)
+	}
+	t.Cleanup(cleanup)
+
+	resp := authenticateUser(t, "hunter@gmail.com", "password")
+	token := resp["authentication_token"].(map[string]any)["token"].(string)
+
+	mockPostCoffeePayload := `{
+    "name": "Blueberry Boom",
+    "region": "Ethiopia",
+    "img": "https://st.kofio.co/img_product/boeV9yxzHn2OwWv/9626/sq_350_DisfG6edTXbtaYponjRQ_102573.png",
+    "description": "This is a delicious blueberry coffee :)"
+	}`
+	// successfully delete coffee
+	// delete a coffee that doest exist fails
+	// delete a coffee that you dont own fails
+	// delete a coffee unauthorized fails
+
+	t.Run("Successfully deletes a coffee", func(t *testing.T) {
+		// post a new coffee and extract ID
+		headers := map[string]string{
+			"Authorization": fmt.Sprintf("Bearer %s", token),
+		}
+
+		// post the new coffee
+		requestURL := fmt.Sprintf("http://localhost:%d/v1/coffees", 3001)
+		statusCode, _, returnedBody := post(t, requestURL, strings.NewReader(mockPostCoffeePayload), headers)
+		assert.Equal(t, http.StatusCreated, statusCode)
+		postedCoffeeID := int(returnedBody["coffee"].(map[string]any)["id"].(float64))
+
+		// get request to that new coffee returns 200
+		getURL := fmt.Sprintf("http://localhost:%d/v1/coffees/%d", 3001, postedCoffeeID)
+		statusCode, _, _ = get(t, getURL, headers)
+		assert.Equal(t, http.StatusOK, statusCode)
+
+		// delete the coffee
+		deleteURL := fmt.Sprintf("http://localhost:%d/v1/coffees/%d", 3001, postedCoffeeID)
+		statusCode, _, returnedBody = delete(t, deleteURL, headers)
+		assert.Equal(t, http.StatusOK, statusCode)
+		assert.NotEmpty(t, returnedBody["message"])
+
+		// get request of the deleted coffee returns 404
+		statusCode, _, _ = get(t, getURL, headers)
+		assert.Equal(t, http.StatusNotFound, statusCode)
+	})
+
+	t.Run("Deleting a coffee that does not exist returns an error", func(t *testing.T) {
+		headers := map[string]string{
+			"Authorization": fmt.Sprintf("Bearer %s", token),
+		}
+
+		deleteURL := fmt.Sprintf("http://localhost:%d/v1/coffees/%d", 3001, 10000)
+		statusCode, _, _ := delete(t, deleteURL, headers)
+		assert.Equal(t, http.StatusNotFound, statusCode)
+	})
+
+	t.Run("Deleting a coffee that the user does not own returns an error", func(t *testing.T) {
+		// create a log in as a new user
+		createUser(t)
+		res := authenticateUser(t, "test@example.com", "password")
+		newToken := res["authentication_token"].(map[string]any)["token"].(string)
+
+		// post a request as that user
+		newUserHeaders := map[string]string{
+			"Authorization": fmt.Sprintf("Bearer %s", newToken),
+		}
+		requestURL := fmt.Sprintf("http://localhost:%d/v1/coffees", 3001)
+		statusCode, _, returnedBody := post(t, requestURL, strings.NewReader(mockPostCoffeePayload), newUserHeaders)
+		assert.Equal(t, http.StatusCreated, statusCode)
+		newPostedCoffeeID := int(returnedBody["coffee"].(map[string]any)["id"].(float64))
+
+		// send delete request as the old user on the new record
+		headers := map[string]string{
+			"Authorization": fmt.Sprintf("Bearer %s", token),
+		}
+		deleteURL := fmt.Sprintf("http://localhost:%d/v1/coffees/%d", 3001, newPostedCoffeeID)
+		statusCode, _, _ = delete(t, deleteURL, headers)
+		assert.Equal(t, http.StatusNotFound, statusCode)
+	})
+
+	t.Run("Deleting a coffee when the user is not authenticated returns an error", func(t *testing.T) {
+		deleteURL := fmt.Sprintf("http://localhost:%d/v1/coffees/%d", 3001, 1)
+		statusCode, _, _ := delete(t, deleteURL, nil)
+		assert.Equal(t, http.StatusUnauthorized, statusCode)
+	})
+}
