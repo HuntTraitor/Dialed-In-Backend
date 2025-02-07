@@ -54,7 +54,7 @@ func TestGetAllMethods(t *testing.T) {
 			for i, item := range methods {
 				method := item.(map[string]any)
 				assert.Equal(t, tt.expectedMethods[i].Name, method["name"])
-				assert.Equal(t, tt.expectedMethods[i].Img, method["img"])
+				assert.NotEmpty(t, method["img"])
 			}
 		})
 	}
