@@ -2,8 +2,8 @@ INSERT INTO users (name, email, password_hash, activated) VALUES
     ('Hunter', 'hunter@gmail.com', '$2a$12$swsVl00IqCna.Uq5Pssh9erv5sT9raLq.my2nZFFGxiXErVcPH9Hy', false);
 
 INSERT INTO methods (name, img) VALUES
-    ('Pour Over', 'https://www.lacolombe.com/cdn/shop/products/BrewMerch_Holiday2238166_2.jpg?v=1736688225'),
-    ('Hario Switch', 'https://www.hario-canada.ca/cdn/shop/products/hario_ssd-200-b-v60-02-switch-immersion-dripper_pouring_1024x1024.jpg?v=1672852353');
+    ('Pour Over', 'https://dialedin.s3.us-east-2.amazonaws.com/methods/pour_over.webp'),
+    ('Hario Switch', 'https://dialedin.s3.us-east-2.amazonaws.com/methods/hario_switch.webp');
 
 INSERT INTO coffees(user_id, name, region, img, description) VALUES
     ((SELECT id FROM users WHERE email = 'hunter@gmail.com'), 'Milky Cake', 'Columbia', 'https://res.cloudinary.com/dak-coffee-roasters/image/upload/f_auto,q_auto,c_scale,w_500//Products/Thumbs/limeball_nbz7sk', 'Very sweet coffee with notes of cinnamon');
