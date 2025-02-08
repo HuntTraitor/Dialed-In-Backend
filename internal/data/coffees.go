@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"time"
 )
@@ -21,6 +22,7 @@ type Coffee struct {
 
 type CoffeeModel struct {
 	DB *sql.DB
+	s3 *s3.S3
 }
 
 type CoffeeModelInterface interface {

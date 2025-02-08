@@ -6,6 +6,10 @@ import (
 	"expvar"
 	"flag"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"github.com/hunttraitor/dialed-in-backend/internal/mailer"
 	"github.com/hunttraitor/dialed-in-backend/internal/vcs"
@@ -47,6 +51,13 @@ type config struct {
 		password string
 		sender   string
 	}
+
+	s3 struct {
+		bucket    string
+		region    string
+		accessKey string
+		secretKey string
+	}
 }
 
 type application struct {
@@ -66,6 +77,8 @@ func main() {
 	databaseURL := os.Getenv("DATABASE_URL")
 	SMTPUsername := os.Getenv("SMTP_USERNAME")
 	SMTPPassword := os.Getenv("SMTP_PASSWORD")
+	S3AccessKey := os.Getenv("S3_ACCESS_KEY")
+	S3SecretKey := os.Getenv("S3_SECRET_KEY")
 
 	// Setting flags for all the different configurations
 	flag.IntVar(&cfg.port, "port", 3000, "API server port")
@@ -84,6 +97,10 @@ func main() {
 	flag.StringVar(&cfg.smtp.password, "smtp-password", SMTPPassword, "SMTP password")
 	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Dialed-In <no-reply@dialedincafe.com>", "SMTP sender")
 	flag.BoolVar(&cfg.metrics, "metrics", false, "Enable application metrics")
+	flag.StringVar(&cfg.s3.bucket, "s3-bucket", "dialedin", "AWS S3 bucket")
+	flag.StringVar(&cfg.s3.region, "s3-region", "us-east-2", "AWS S3 region")
+	flag.StringVar(&cfg.s3.accessKey, "s3-access-key", S3AccessKey, "AWS S3 access key")
+	flag.StringVar(&cfg.s3.secretKey, "s3-secret-key", S3SecretKey, "AWS S3 secret key")
 	displayVersion := flag.Bool("version", false, "Display version and exit")
 	flag.Parse()
 
@@ -101,6 +118,12 @@ func main() {
 	}
 
 	defer db.Close()
+
+	s3Client, err := openS3(cfg)
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
 
 	logger.Info("Database pool has been established")
 
@@ -122,7 +145,7 @@ func main() {
 	app := &application{
 		config: cfg,
 		logger: logger,
-		models: data.NewModels(db),
+		models: data.NewModels(db, s3Client),
 		mailer: mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
 	}
 
@@ -154,4 +177,16 @@ func openDb(cfg config) (*sql.DB, error) {
 		return nil, err
 	}
 	return db, nil
+}
+
+// openS3 opens a new S3 instance using an accessKey and a secretKey
+func openS3(cfg config) (*s3.S3, error) {
+	sess, err := session.NewSession(&aws.Config{
+		Region:      aws.String(cfg.s3.region),
+		Credentials: credentials.NewStaticCredentials(cfg.s3.accessKey, cfg.s3.secretKey, ""),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s3.New(sess), nil
 }

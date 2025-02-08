@@ -3,6 +3,7 @@ package data
 import (
 	"database/sql"
 	"errors"
+	"github.com/aws/aws-sdk-go/service/s3"
 )
 
 var (
@@ -18,11 +19,11 @@ type Models struct {
 }
 
 // NewModels returns models associated with a real database
-func NewModels(db *sql.DB) Models {
+func NewModels(db *sql.DB, s3 *s3.S3) Models {
 	return Models{
 		Users:   UserModel{DB: db},
 		Tokens:  TokenModel{DB: db},
-		Methods: MethodModel{DB: db},
-		Coffees: CoffeeModel{DB: db},
+		Methods: MethodModel{DB: db, s3: s3},
+		Coffees: CoffeeModel{DB: db, s3: s3},
 	}
 }
