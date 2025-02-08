@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"github.com/hunttraitor/dialed-in-backend/internal/mailer"
 	"github.com/hunttraitor/dialed-in-backend/internal/vcs"
@@ -145,7 +146,7 @@ func main() {
 	app := &application{
 		config: cfg,
 		logger: logger,
-		models: data.NewModels(db, s3Client),
+		models: data.NewModels(db, &s3Client),
 		mailer: mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
 	}
 
@@ -180,7 +181,7 @@ func openDb(cfg config) (*sql.DB, error) {
 }
 
 // openS3 opens a new S3 instance using an accessKey and a secretKey
-func openS3(cfg config) (*s3.S3, error) {
+func openS3(cfg config) (s3iface.S3API, error) {
 	sess, err := session.NewSession(&aws.Config{
 		Region:      aws.String(cfg.s3.region),
 		Credentials: credentials.NewStaticCredentials(cfg.s3.accessKey, cfg.s3.secretKey, ""),

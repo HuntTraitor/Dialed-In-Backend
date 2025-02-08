@@ -3,7 +3,7 @@ package data
 import (
 	"database/sql"
 	"errors"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 )
 
 var (
@@ -18,8 +18,12 @@ type Models struct {
 	Coffees CoffeeModelInterface
 }
 
+type mockS3Client struct {
+	s3iface.S3API
+}
+
 // NewModels returns models associated with a real database
-func NewModels(db *sql.DB, s3 *s3.S3) Models {
+func NewModels(db *sql.DB, s3 *s3iface.S3API) Models {
 	return Models{
 		Users:   UserModel{DB: db},
 		Tokens:  TokenModel{DB: db},

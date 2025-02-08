@@ -7,6 +7,7 @@ import (
 
 func TestGetAll(t *testing.T) {
 	db := newTestDB(t)
+	s3 := newTestS3(t)
 	tests := []struct {
 		name           string
 		expectedResult []Method
@@ -28,7 +29,7 @@ func TestGetAll(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := MethodModel{db}
+			m := MethodModel{db, &s3}
 
 			methods, err := m.GetAll()
 			if err != nil {

@@ -3,7 +3,7 @@ package data
 import (
 	"context"
 	"database/sql"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"time"
 )
 
@@ -16,7 +16,7 @@ type Method struct {
 
 type MethodModel struct {
 	DB *sql.DB
-	s3 *s3.S3
+	s3 *s3iface.S3API
 }
 
 type MethodModelInterface interface {

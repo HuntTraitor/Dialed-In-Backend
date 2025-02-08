@@ -2,6 +2,7 @@ package data
 
 import (
 	"database/sql"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/joho/godotenv"
 	"os"
 	"testing"
@@ -44,4 +45,8 @@ func newTestDB(t *testing.T) *sql.DB {
 
 	})
 	return db
+}
+
+func newTestS3(t *testing.T) s3iface.S3API {
+	return &mockS3Client{}
 }
