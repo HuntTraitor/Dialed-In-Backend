@@ -67,6 +67,7 @@ type application struct {
 	models data.Models
 	mailer Mailer
 	wg     sync.WaitGroup
+	s3     *s3iface.S3API
 }
 
 type Mailer interface {
@@ -146,8 +147,9 @@ func main() {
 	app := &application{
 		config: cfg,
 		logger: logger,
-		models: data.NewModels(db, &s3Client),
+		models: data.NewModels(db),
 		mailer: mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
+		s3:     &s3Client,
 	}
 
 	err = app.serve()
