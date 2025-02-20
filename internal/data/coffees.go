@@ -126,6 +126,7 @@ func (m CoffeeModel) GetOne(id int64, userId int64) (*Coffee, error) {
 		&coffee.CreatedAt,
 		&coffee.Name,
 		&coffee.Region,
+		&coffee.Process,
 		&coffee.Img,
 		&coffee.Description,
 		&coffee.Version,

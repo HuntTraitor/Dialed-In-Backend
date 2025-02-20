@@ -6,13 +6,14 @@ import (
 	"expvar"
 	"flag"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"github.com/hunttraitor/dialed-in-backend/internal/mailer"
+	"github.com/hunttraitor/dialed-in-backend/internal/s3"
+	//myS3 "github.com/hunttraitor/dialed-in-backend/internal/s3"
 	"github.com/hunttraitor/dialed-in-backend/internal/vcs"
 	"log/slog"
 	"os"
@@ -67,7 +68,7 @@ type application struct {
 	models data.Models
 	mailer Mailer
 	wg     sync.WaitGroup
-	s3     *s3iface.S3API
+	s3     *s3.S3
 }
 
 type Mailer interface {
@@ -122,12 +123,6 @@ func main() {
 
 	defer db.Close()
 
-	s3Client, err := openS3(cfg)
-	if err != nil {
-		logger.Error(err.Error())
-		os.Exit(1)
-	}
-
 	logger.Info("Database pool has been established")
 
 	// Add system debug logs to /debug/vars
@@ -145,12 +140,24 @@ func main() {
 		return time.Now().Unix()
 	}))
 
+	s3Config, err := awsConfig.LoadDefaultConfig(context.TODO(),
+		awsConfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.s3.accessKey, cfg.s3.secretKey, "")),
+		awsConfig.WithRegion(cfg.s3.region),
+	)
+
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
+
+	logger.Info("AWS S3 Config has been established")
+
 	app := &application{
 		config: cfg,
 		logger: logger,
 		models: data.NewModels(db),
 		mailer: mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
-		s3:     &s3Client,
+		s3:     NewS3(s3Config),
 	}
 
 	err = app.serve()
@@ -183,14 +190,13 @@ func openDb(cfg config) (*sql.DB, error) {
 	return db, nil
 }
 
-// openS3 opens a new S3 instance using an accessKey and a secretKey
-func openS3(cfg config) (s3iface.S3API, error) {
-	sess, err := session.NewSession(&aws.Config{
-		Region:      aws.String(cfg.s3.region),
-		Credentials: credentials.NewStaticCredentials(cfg.s3.accessKey, cfg.s3.secretKey, ""),
-	})
-	if err != nil {
-		return nil, err
+// NewS3 creates a new S3 object
+func NewS3(cfg aws.Config) *s3.S3 {
+	client := awsS3.NewFromConfig(cfg)
+	presigner := awsS3.NewPresignClient(client)
+
+	return &s3.S3{
+		Client:    client,
+		Presigner: presigner,
 	}
-	return s3.New(sess), nil
 }

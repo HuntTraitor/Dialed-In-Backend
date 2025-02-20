@@ -8,6 +8,7 @@ import (
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"io"
 	"net/http"
+	"time"
 )
 
 func (app *application) listCoffeesHandler(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +52,7 @@ func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	// upload byte buffer to s3
-	fileName, err := s3.UploadToS3(*app.s3, buf, handler.Header, "coffees/", app.config.s3.bucket)
+	fileName, err := s3.UploadToS3(app.s3.Client, buf, handler.Header, "coffees/", app.config.s3.bucket)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -101,6 +102,11 @@ func (app *application) getCoffeeHandler(w http.ResponseWriter, r *http.Request)
 		}
 		return
 	}
+
+	// pre-sign the image url
+	imgURL, err := s3.PreSignURL(app.s3.Presigner, app.config.s3.bucket, "coffees/"+coffee.Img, time.Hour*24)
+	coffee.Img = imgURL
+
 	err = app.writeJSON(w, http.StatusOK, envelope{"coffee": coffee}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
