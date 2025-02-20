@@ -84,7 +84,7 @@ func (m CoffeeModel) GetAllForUser(userID int64) ([]*Coffee, error) {
 }
 
 func (m CoffeeModel) Insert(userID int64, coffee *Coffee) (*Coffee, error) {
-	query := `INSERT INTO coffees (user_id, name, region, process, img, description) VALUES ($1, $2, $3, $4, $5) RETURNING *`
+	query := `INSERT INTO coffees (user_id, name, region, process, img, description) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`
 
 	args := []any{userID, coffee.Name, coffee.Region, coffee.Process, coffee.Img, coffee.Description}
 

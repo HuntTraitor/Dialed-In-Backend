@@ -79,6 +79,7 @@ func main() {
 	databaseURL := os.Getenv("DATABASE_URL")
 	SMTPUsername := os.Getenv("SMTP_USERNAME")
 	SMTPPassword := os.Getenv("SMTP_PASSWORD")
+	S3Bucket := os.Getenv("S3_BUCKET")
 	S3AccessKey := os.Getenv("S3_ACCESS_KEY")
 	S3SecretKey := os.Getenv("S3_SECRET_KEY")
 
@@ -99,7 +100,7 @@ func main() {
 	flag.StringVar(&cfg.smtp.password, "smtp-password", SMTPPassword, "SMTP password")
 	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Dialed-In <no-reply@dialedincafe.com>", "SMTP sender")
 	flag.BoolVar(&cfg.metrics, "metrics", false, "Enable application metrics")
-	flag.StringVar(&cfg.s3.bucket, "s3-bucket", "dialedin", "AWS S3 bucket")
+	flag.StringVar(&cfg.s3.bucket, "s3-bucket", S3Bucket, "AWS S3 bucket")
 	flag.StringVar(&cfg.s3.region, "s3-region", "us-east-2", "AWS S3 region")
 	flag.StringVar(&cfg.s3.accessKey, "s3-access-key", S3AccessKey, "AWS S3 access key")
 	flag.StringVar(&cfg.s3.secretKey, "s3-secret-key", S3SecretKey, "AWS S3 secret key")

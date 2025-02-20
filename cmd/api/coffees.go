@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
+	"github.com/hunttraitor/dialed-in-backend/internal/s3"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
+	"io"
 	"net/http"
 )
 
@@ -24,25 +27,42 @@ func (app *application) listCoffeesHandler(w http.ResponseWriter, r *http.Reques
 func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Request) {
 	user := app.contextGetUser(r)
 
-	var input struct {
-		Name        string `json:"name"`
-		Region      string `json:"region"`
-		Img         string `json:"img"`
-		Description string `json:"description"`
-	}
-
-	// read the input
-	err := app.readJSON(w, r, &input)
+	// limit 10mb
+	err := r.ParseMultipartForm(10 << 20)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
 		return
 	}
 
+	// extract image from form
+	img, handler, err := r.FormFile("img")
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+	defer img.Close()
+
+	// convert image to byte buffer
+	var buf bytes.Buffer
+	_, err = io.Copy(&buf, img)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	// upload byte buffer to s3
+	fileName, err := s3.UploadToS3(*app.s3, buf, handler.Header, "coffees/", app.config.s3.bucket)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
 	coffee := &data.Coffee{
-		Name:        input.Name,
-		Region:      input.Region,
-		Img:         input.Img,
-		Description: input.Description,
+		Name:        r.Form.Get("name"),
+		Region:      r.Form.Get("region"),
+		Process:     r.Form.Get("process"),
+		Img:         fileName,
+		Description: r.Form.Get("description"),
 	}
 
 	// validate the input
