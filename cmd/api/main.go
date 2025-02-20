@@ -13,7 +13,6 @@ import (
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"github.com/hunttraitor/dialed-in-backend/internal/mailer"
 	"github.com/hunttraitor/dialed-in-backend/internal/s3"
-	//myS3 "github.com/hunttraitor/dialed-in-backend/internal/s3"
 	"github.com/hunttraitor/dialed-in-backend/internal/vcs"
 	"log/slog"
 	"os"
