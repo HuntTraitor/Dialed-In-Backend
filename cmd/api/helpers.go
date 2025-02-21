@@ -154,3 +154,16 @@ func (app *application) background(fn func()) {
 		fn()
 	}()
 }
+
+// GetOptionalString extracts a pointer to a string from a multipart form request.
+// If the field is not present, it returns nil.
+func GetOptionalString(r *http.Request, field string) *string {
+	if r.MultipartForm == nil {
+		return nil
+	}
+	if values, exists := r.MultipartForm.Value[field]; exists && len(values) > 0 {
+		value := values[0]
+		return &value
+	}
+	return nil
+}

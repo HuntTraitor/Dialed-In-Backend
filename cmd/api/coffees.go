@@ -148,31 +148,51 @@ func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var input struct {
-		Name        *string `json:"name"`
-		Region      *string `json:"region"`
-		Img         *string `json:"img"`
-		Description *string `json:"description"`
-	}
-
-	err = app.readJSON(w, r, &input)
+	err = r.ParseMultipartForm(10 << 20)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
 		return
 	}
 
+	// Extract form values as pointers using the helper
+	name := GetOptionalString(r, "name")
+	region := GetOptionalString(r, "region")
+	process := GetOptionalString(r, "process")
+	description := GetOptionalString(r, "description")
+
 	// update the fields
-	if input.Name != nil {
-		coffee.Name = *input.Name
+	if name != nil {
+		coffee.Name = *name
 	}
-	if input.Region != nil {
-		coffee.Region = *input.Region
+	if region != nil {
+		coffee.Region = *region
 	}
-	if input.Img != nil {
-		coffee.Img = *input.Img
+	if process != nil {
+		coffee.Process = *process
 	}
-	if input.Description != nil {
-		coffee.Description = *input.Description
+	if description != nil {
+		coffee.Img = *description
+	}
+
+	// check if an image is uploaded and if so replace the image
+	imgFile, header, err := r.FormFile("img")
+	if err == nil {
+		// convert image to byte buffer
+		var buf bytes.Buffer
+		_, err = io.Copy(&buf, imgFile)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+
+		// upload byte buffer to s3
+		var fileName string
+		fileName, err = s3.UploadToS3(app.s3.Client, buf, header.Header, "coffees/", app.config.s3.bucket)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+		coffee.Img = fileName
 	}
 
 	// validate the new coffee struct
@@ -193,6 +213,14 @@ func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Reque
 		}
 		return
 	}
+
+	// PreSign the URL to send back to the client
+	imgURL, err := s3.PreSignURL(app.s3.Presigner, app.config.s3.bucket, "coffees/"+coffee.Img, time.Hour*24)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+	coffee.Img = imgURL
 
 	// write the new coffee model to the response
 	err = app.writeJSON(w, http.StatusOK, envelope{"coffee": coffee}, nil)

@@ -145,13 +145,14 @@ func (m CoffeeModel) GetOne(id int64, userId int64) (*Coffee, error) {
 
 func (m CoffeeModel) Update(coffee *Coffee) error {
 	query := `UPDATE coffees
-						SET name = $1, region = $2, img = $3, description = $4, version = version + 1
-						WHERE coffees.id = $5 AND version = $6
+						SET name = $1, region = $2, process = $3, img = $4, description = $5, version = version + 1
+						WHERE coffees.id = $6 AND version = $7
 						RETURNING version`
 
 	args := []any{
 		coffee.Name,
 		coffee.Region,
+		coffee.Process,
 		coffee.Img,
 		coffee.Description,
 		coffee.ID,
