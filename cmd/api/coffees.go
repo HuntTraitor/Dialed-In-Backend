@@ -21,7 +21,8 @@ func (app *application) listCoffeesHandler(w http.ResponseWriter, r *http.Reques
 
 	for _, coffee := range coffees {
 		// pre-sign the image url
-		imgURL, err := s3.PreSignURL(app.s3.Presigner, app.config.s3.bucket, "coffees/"+coffee.Img, time.Hour*24)
+		var imgURL string
+		imgURL, err = s3.PreSignURL(app.s3.Presigner, app.config.s3.bucket, "coffees/"+coffee.Img, time.Hour*24)
 		if err != nil {
 			app.serverErrorResponse(w, r, err)
 			return
