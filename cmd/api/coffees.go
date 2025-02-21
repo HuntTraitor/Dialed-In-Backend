@@ -90,6 +90,14 @@ func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Pre-sign the URL to send back to the client
+	imgURL, err := s3.PreSignURL(app.s3.Presigner, app.config.s3.bucket, "coffees/"+coffee.Img, time.Hour*24)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+	coffee.Img = imgURL
+
 	err = app.writeJSON(w, http.StatusCreated, envelope{"coffee": coffee}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
