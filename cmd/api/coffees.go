@@ -19,6 +19,16 @@ func (app *application) listCoffeesHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	for _, coffee := range coffees {
+		// pre-sign the image url
+		imgURL, err := s3.PreSignURL(app.s3.Presigner, app.config.s3.bucket, "coffees/"+coffee.Img, time.Hour*24)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+		coffee.Img = imgURL
+	}
+
 	err = app.writeJSON(w, http.StatusOK, envelope{"coffees": coffees}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
@@ -105,6 +115,10 @@ func (app *application) getCoffeeHandler(w http.ResponseWriter, r *http.Request)
 
 	// pre-sign the image url
 	imgURL, err := s3.PreSignURL(app.s3.Presigner, app.config.s3.bucket, "coffees/"+coffee.Img, time.Hour*24)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
 	coffee.Img = imgURL
 
 	err = app.writeJSON(w, http.StatusOK, envelope{"coffee": coffee}, nil)

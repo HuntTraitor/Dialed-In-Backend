@@ -67,6 +67,7 @@ func (m CoffeeModel) GetAllForUser(userID int64) ([]*Coffee, error) {
 			&coffee.CreatedAt,
 			&coffee.Name,
 			&coffee.Region,
+			&coffee.Process,
 			&coffee.Img,
 			&coffee.Description,
 			&coffee.Version,
