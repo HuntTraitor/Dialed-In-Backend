@@ -89,6 +89,12 @@ func UploadToS3(opts ...Option) (string, error) {
 	if options.Bucket == "" {
 		return "", fmt.Errorf("s3 bucket is required")
 	}
+	if options.File.Len() == 0 {
+		return "", fmt.Errorf("s3 file is required")
+	}
+	if options.FileType == nil {
+		return "", fmt.Errorf("s3 file-type is required")
+	}
 
 	// Generate a unique filename if not provided
 	fileName := options.OldFileName

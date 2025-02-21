@@ -22,7 +22,12 @@ func (app *application) listCoffeesHandler(w http.ResponseWriter, r *http.Reques
 	for _, coffee := range coffees {
 		// pre-sign the image url
 		var imgURL string
-		imgURL, err = s3.PreSignURL(app.s3.Presigner, app.config.s3.bucket, "coffees/"+coffee.Img, time.Hour*24)
+		imgURL, err = s3.PreSignURL(
+			s3.WithPresigner(app.s3.Presigner),
+			s3.WithPresignBucket(app.config.s3.bucket),
+			s3.WithPresignFilePath("coffees/"+coffee.Img),
+			s3.WithPresignExpiration(time.Hour*24),
+		)
 		if err != nil {
 			app.serverErrorResponse(w, r, err)
 			return
@@ -63,7 +68,13 @@ func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	// upload byte buffer to s3
-	fileName, err := s3.UploadToS3(app.s3.Client, buf, handler.Header, "coffees/", app.config.s3.bucket)
+	fileName, err := s3.UploadToS3(
+		s3.WithClient(app.s3.Client),
+		s3.WithFile(buf),
+		s3.WithFileType(handler.Header),
+		s3.WithBucket(app.config.s3.bucket),
+		s3.WithFilePath("coffees/"))
+
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -91,7 +102,12 @@ func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Pre-sign the URL to send back to the client
-	imgURL, err := s3.PreSignURL(app.s3.Presigner, app.config.s3.bucket, "coffees/"+coffee.Img, time.Hour*24)
+	imgURL, err := s3.PreSignURL(
+		s3.WithPresigner(app.s3.Presigner),
+		s3.WithPresignBucket(app.config.s3.bucket),
+		s3.WithPresignFilePath("coffees/"+coffee.Img),
+		s3.WithPresignExpiration(time.Hour*24),
+	)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -123,7 +139,12 @@ func (app *application) getCoffeeHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	// pre-sign the image url
-	imgURL, err := s3.PreSignURL(app.s3.Presigner, app.config.s3.bucket, "coffees/"+coffee.Img, time.Hour*24)
+	imgURL, err := s3.PreSignURL(
+		s3.WithPresigner(app.s3.Presigner),
+		s3.WithPresignBucket(app.config.s3.bucket),
+		s3.WithPresignFilePath("coffees/"+coffee.Img),
+		s3.WithPresignExpiration(time.Hour*24),
+	)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -162,7 +183,7 @@ func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Extract form values as pointers using the helper
+	// Extract form values as pointers
 	name := GetOptionalString(r, "name")
 	region := GetOptionalString(r, "region")
 	process := GetOptionalString(r, "process")
@@ -179,13 +200,15 @@ func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Reque
 		coffee.Process = *process
 	}
 	if description != nil {
-		coffee.Img = *description
+		coffee.Description = *description
 	}
 
 	// check if an image is uploaded and if so replace the image
 	imgFile, header, err := r.FormFile("img")
 	if err == nil {
-		// convert image to byte buffer
+		defer imgFile.Close()
+
+		// convert inputted image to byte buffer
 		var buf bytes.Buffer
 		_, err = io.Copy(&buf, imgFile)
 		if err != nil {
@@ -193,9 +216,16 @@ func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Reque
 			return
 		}
 
-		// upload byte buffer to s3
+		// upload new byte buffer to s3
 		var fileName string
-		fileName, err = s3.UploadToS3(app.s3.Client, buf, header.Header, "coffees/", app.config.s3.bucket)
+		fileName, err = s3.UploadToS3(
+			s3.WithClient(app.s3.Client),
+			s3.WithFile(buf),
+			s3.WithFileType(header.Header),
+			s3.WithFilePath("coffees/"),
+			s3.WithOldFileName(coffee.Img),
+			s3.WithBucket(app.config.s3.bucket),
+		)
 		if err != nil {
 			app.serverErrorResponse(w, r, err)
 			return
@@ -223,7 +253,12 @@ func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	// PreSign the URL to send back to the client
-	imgURL, err := s3.PreSignURL(app.s3.Presigner, app.config.s3.bucket, "coffees/"+coffee.Img, time.Hour*24)
+	imgURL, err := s3.PreSignURL(
+		s3.WithPresigner(app.s3.Presigner),
+		s3.WithPresignBucket(app.config.s3.bucket),
+		s3.WithPresignFilePath("coffees/"+coffee.Img),
+		s3.WithPresignExpiration(time.Hour*24),
+	)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -243,6 +278,31 @@ func (app *application) deleteCoffeeHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		app.notFoundResponse(w, r)
 		return
+	}
+
+	coffee, err := app.models.Coffees.GetOne(id, user.ID)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	deleted, err := s3.DeleteFromS3(
+		s3.WithDeleteClient(app.s3.Client),
+		s3.WithDeleteBucket(app.config.s3.bucket),
+		s3.WithDeleteFilePath("coffees/"+coffee.Img),
+	)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	if !deleted {
+		app.logger.Info("S3 image deletion failed for " + coffee.Img)
 	}
 
 	err = app.models.Coffees.Delete(id, user.ID)

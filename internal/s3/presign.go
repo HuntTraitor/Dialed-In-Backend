@@ -71,7 +71,7 @@ func PreSignURL(opts ...PreSignOption) (string, error) {
 		return "", fmt.Errorf("presign client is required")
 	}
 	if options.Bucket == "" {
-		return "", fmt.Errorf("S3 bucket is required")
+		return "", fmt.Errorf("s3 bucket is required")
 	}
 	if options.FilePath == "" {
 		return "", fmt.Errorf("file path is required")
