@@ -24,7 +24,7 @@ const (
 func LaunchTestProgram(port string) (cleanup func(), sendInterrupt func() error, err error) {
 
 	// Suppress output to reduce clutter in CI
-	//suppressOutput()
+	suppressOutput()
 
 	err = godotenv.Load("../.env")
 	if err != nil {

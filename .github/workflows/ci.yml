@@ -17,6 +17,9 @@ env:
   TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
   SMTP_USERNAME: ${{ vars.SMTP_USERNAME }}
   SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+  S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+  S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+  S3_BUCKET: ${{ vars.S3_BUCKET }}
 
 jobs:
   build:
@@ -44,6 +47,9 @@ jobs:
         echo TEST_DATABASE_URL=${{ secrets.TEST_DATABASE_URL }} >> .env
         echo SMTP_USERNAME=${{ vars.SMTP_USERNAME }} >> .env
         echo SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }} >> .env
+        echo S3_ACCESS_KEY=${{ secrets.S3_ACCESS_KEY }} >> .env
+        echo S3_SECRET_KEY=${{ secrets.S3_SECRET_KEY }} >> .env
+        echo S3_BUCKET=${{ vars.S3_BUCKET }} >> .env
         set -a
         source .env
         set +a
