@@ -243,7 +243,6 @@ func TestPostCoffee(t *testing.T) {
 				returnedError := returnedBody["error"].(map[string]any)
 				assert.Equal(t, tt.expectedError, returnedError)
 			}
-
 		})
 	}
 
@@ -309,188 +308,235 @@ func TestPostCoffee(t *testing.T) {
 	})
 }
 
-//
-//func TestUpdateCoffee(t *testing.T) {
-//	cleanup, _, err := LaunchTestProgram(port)
-//	if err != nil {
-//		t.Fatalf("failed to launch test program: %v", err)
-//	}
-//	t.Cleanup(cleanup)
-//
-//	resp := authenticateUser(t, "hunter@gmail.com", "password")
-//	token := resp["authentication_token"].(map[string]any)["token"].(string)
-//
-//	mockPostCoffeePayload := `{
-//    "name": "Blueberry Boom",
-//    "region": "Ethiopia",
-//    "img": "https://st.kofio.co/img_product/boeV9yxzHn2OwWv/9626/sq_350_DisfG6edTXbtaYponjRQ_102573.png",
-//    "description": "This is a delicious blueberry coffee :)"
-//	}`
-//
-//	tests := []struct {
-//		name               string
-//		payload            string
-//		expectedStatusCode int
-//		expectedResponse   map[string]any
-//		expectedError      map[string]any
-//	}{
-//		{
-//			name: "Successfully updates a coffee",
-//			payload: `{
-//				"name": "Updated Title",
-//				"region": "Updated Region",
-//				"img": "https://updatedimage.com",
-//				"description": "Updated Description"
-//			}`,
-//			expectedStatusCode: http.StatusOK,
-//			expectedResponse: map[string]any{
-//				"name":        "Updated Title",
-//				"region":      "Updated Region",
-//				"img":         "https://updatedimage.com",
-//				"description": "Updated Description",
-//				"version":     float64(2),
-//			},
-//			expectedError: nil,
-//		},
-//		{
-//			name: "Successfully Partially updates a coffee",
-//			payload: `{
-//				"name": "Updated Title"
-//			}`,
-//			expectedStatusCode: http.StatusOK,
-//			expectedResponse: map[string]any{
-//				"name":        "Updated Title",
-//				"region":      "Ethiopia",
-//				"img":         "https://st.kofio.co/img_product/boeV9yxzHn2OwWv/9626/sq_350_DisfG6edTXbtaYponjRQ_102573.png",
-//				"description": "This is a delicious blueberry coffee :)",
-//				"version":     float64(2),
-//			},
-//			expectedError: nil,
-//		},
-//		{
-//			name:               "Updating with no fields is still successful",
-//			payload:            `{}`,
-//			expectedStatusCode: http.StatusOK,
-//			expectedResponse: map[string]any{
-//				"name":        "Blueberry Boom",
-//				"region":      "Ethiopia",
-//				"img":         "https://st.kofio.co/img_product/boeV9yxzHn2OwWv/9626/sq_350_DisfG6edTXbtaYponjRQ_102573.png",
-//				"description": "This is a delicious blueberry coffee :)",
-//			},
-//			expectedError: nil,
-//		},
-//		{
-//			name:               "Update with an unknown field returns an error",
-//			payload:            `{"random_field": "unknown"}`,
-//			expectedStatusCode: http.StatusBadRequest,
-//			expectedResponse:   nil,
-//			expectedError: map[string]any{
-//				"error": "body contains unknown key \"random_field\"",
-//			},
-//		},
-//		{
-//			name: "Test with a known AND unknown field returns an error",
-//			payload: `{
-//				"name": "Updated Title",
-//				"region": "Updated Region",
-//				"img": "https://updatedimage.com",
-//				"description": "Updated Description",
-//				"random_field": "unknown"
-//			}`,
-//			expectedStatusCode: http.StatusBadRequest,
-//			expectedResponse:   nil,
-//			expectedError: map[string]any{
-//				"error": "body contains unknown key \"random_field\"",
-//			},
-//		},
-//		{
-//			name:               "Update on a non image url returns an error",
-//			payload:            `{"img": "randomimg"}`,
-//			expectedStatusCode: http.StatusUnprocessableEntity,
-//			expectedResponse:   nil,
-//			expectedError: map[string]any{
-//				"error": map[string]any{
-//					"img": "must be a valid image URL",
-//				},
-//			},
-//		},
-//	}
-//
-//	// TEST TABLE CASES
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//
-//			// post a new coffee
-//			headers := map[string]string{
-//				"Authorization": fmt.Sprintf("Bearer %s", token),
-//			}
-//			requestURL := fmt.Sprintf("http://localhost:%d/v1/coffees", 3001)
-//			statusCode, _, returnedBody := post(t, requestURL, strings.NewReader(mockPostCoffeePayload), headers)
-//			assert.Equal(t, http.StatusCreated, statusCode)
-//
-//			// god kill me with this typing sometimes
-//			postedCoffeeID := int(returnedBody["coffee"].(map[string]any)["id"].(float64))
-//
-//			// send a patch request to that url
-//			patchURL := fmt.Sprintf("http://localhost:%d/v1/coffees/%d", 3001, postedCoffeeID)
-//			statusCode, _, returnedBody = patch(t, patchURL, strings.NewReader(tt.payload), headers)
-//			assert.Equal(t, tt.expectedStatusCode, statusCode)
-//
-//			if tt.expectedResponse != nil {
-//				coffeeBody := returnedBody["coffee"].(map[string]any)
-//				for k, v := range tt.expectedResponse {
-//					assert.Equal(t, v, coffeeBody[k])
-//				}
-//			}
-//			if tt.expectedError != nil {
-//				assert.Equal(t, tt.expectedError, returnedBody)
-//			}
-//
-//		})
-//	}
-//
-//	t.Run("Updating an item that does not exist returns an error", func(t *testing.T) {
-//		// send a patch request to that url
-//		headers := map[string]string{
-//			"Authorization": fmt.Sprintf("Bearer %s", token),
-//		}
-//		patchURL := fmt.Sprintf("http://localhost:%d/v1/coffees/%d", 3001, 47834957)
-//		statusCode, _, _ := patch(t, patchURL, strings.NewReader(mockPostCoffeePayload), headers)
-//		assert.Equal(t, http.StatusNotFound, statusCode)
-//	})
-//
-//	t.Run("Updating an item that the user does not own returns an error", func(t *testing.T) {
-//
-//		// create and log into new user
-//		createUser(t)
-//		res := authenticateUser(t, "test@example.com", "password")
-//		newToken := res["authentication_token"].(map[string]any)["token"].(string)
-//
-//		// post a request as that user
-//		newUserHeaders := map[string]string{
-//			"Authorization": fmt.Sprintf("Bearer %s", newToken),
-//		}
-//		requestURL := fmt.Sprintf("http://localhost:%d/v1/coffees", 3001)
-//		statusCode, _, returnedBody := post(t, requestURL, strings.NewReader(mockPostCoffeePayload), newUserHeaders)
-//		assert.Equal(t, http.StatusCreated, statusCode)
-//		newPostedCoffeeID := int(returnedBody["coffee"].(map[string]any)["id"].(float64))
-//
-//		// send patch request as the old user on the new record
-//		headers := map[string]string{
-//			"Authorization": fmt.Sprintf("Bearer %s", token),
-//		}
-//		patchURL := fmt.Sprintf("http://localhost:%d/v1/coffees/%d", 3001, newPostedCoffeeID)
-//		statusCode, _, _ = patch(t, patchURL, strings.NewReader(mockPostCoffeePayload), headers)
-//		assert.Equal(t, http.StatusNotFound, statusCode)
-//	})
-//
-//	t.Run("Unauthenticated user updating a coffee returns an error", func(t *testing.T) {
-//		patchURL := fmt.Sprintf("http://localhost:%d/v1/coffees/%d", 3001, 1)
-//		statusCode, _, _ := patch(t, patchURL, strings.NewReader(mockPostCoffeePayload), nil)
-//		assert.Equal(t, http.StatusUnauthorized, statusCode)
-//	})
-//}
-//
+func TestUpdateCoffee(t *testing.T) {
+	cleanup, _, err := LaunchTestProgram(port)
+	if err != nil {
+		t.Fatalf("failed to launch test program: %v", err)
+	}
+	t.Cleanup(cleanup)
+
+	resp := authenticateUser(t, "hunter@gmail.com", "password")
+	token := resp["authentication_token"].(map[string]any)["token"].(string)
+
+	mockCoffee := data.Coffee{
+		Name:        "Test Coffee",
+		Region:      "Test Region",
+		Process:     "Test Process",
+		Description: "Test Description",
+		Img:         "Test Image",
+	}
+
+	tests := []struct {
+		name               string
+		payload            map[string]any
+		expectedStatusCode int
+		expectedResponse   map[string]any
+		expectedError      map[string]any
+	}{
+		{
+			name: "Successfully updates a coffee",
+			payload: map[string]any{
+				"name":        "Updated Name",
+				"region":      "Updated Region",
+				"process":     "Updated Process",
+				"description": "Updated Description",
+				"img":         []byte("Updated Image"),
+			},
+			expectedStatusCode: http.StatusOK,
+			expectedResponse: map[string]any{
+				"name":        "Updated Name",
+				"region":      "Updated Region",
+				"process":     "Updated Process",
+				"img":         "",
+				"description": "Updated Description",
+				"version":     float64(2),
+			},
+			expectedError: nil,
+		},
+		{
+			name: "Successfully Partially updates a coffee",
+			payload: map[string]any{
+				"name": "Updated Name",
+			},
+			expectedStatusCode: http.StatusOK,
+			expectedResponse: map[string]any{
+				"name":        "Updated Name",
+				"region":      "Test Region",
+				"process":     "Test Process",
+				"img":         "",
+				"description": "Test Description",
+				"version":     float64(2),
+			},
+			expectedError: nil,
+		},
+		{
+			name:               "Updating with no fields is still successful",
+			payload:            map[string]any{},
+			expectedStatusCode: http.StatusOK,
+			expectedResponse: map[string]any{
+				"name":        "Test Coffee",
+				"region":      "Test Region",
+				"process":     "Test Process",
+				"img":         "",
+				"description": "Test Description",
+			},
+			expectedError: nil,
+		},
+		{
+			name: "Update with an unknown field returns an error",
+			payload: map[string]any{
+				"random_field": "unknown",
+			},
+			expectedStatusCode: http.StatusBadRequest,
+			expectedResponse:   nil,
+			expectedError: map[string]any{
+				"error": "body contains unknown key \"random_field\"",
+			},
+		},
+		{
+			name: "Update with a known AND unknown field returns an error",
+			payload: map[string]any{
+				"name":         "Updated Name",
+				"region":       "Updated Region",
+				"process":      "Updated Process",
+				"img":          []byte(""),
+				"description":  "Updated Description",
+				"random_field": "unknown",
+			},
+			expectedStatusCode: http.StatusBadRequest,
+			expectedResponse:   nil,
+			expectedError: map[string]any{
+				"error": "body contains unknown key \"random_field\"",
+			},
+		},
+	}
+
+	// TEST TABLE CASES
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			// post a new coffee
+			postedCoffee := createCoffee(t, token, mockCoffee, []byte("Test Image"))
+			postedCoffeeID := int(postedCoffee["coffee"].(map[string]any)["id"].(float64))
+
+			// send a patch request to that url
+			var b bytes.Buffer
+			writer := multipart.NewWriter(&b)
+
+			for key, value := range tt.payload {
+				if key == "img" {
+					fileWriter, err := writer.CreateFormFile("img", "Test Image")
+					if err != nil {
+						t.Fatalf("failed to create form file: %v", err)
+					}
+					fileWriter.Write(tt.payload["img"].([]byte)) // Write mock image data
+				} else {
+					writer.WriteField(key, fmt.Sprintf("%v", value))
+				}
+			}
+
+			headers := map[string]string{
+				"Authorization": fmt.Sprintf("Bearer %s", token),
+				"Content-Type":  writer.FormDataContentType(),
+			}
+			writer.Close()
+
+			patchURL := fmt.Sprintf("http://localhost:%d/v1/coffees/%d", 3001, postedCoffeeID)
+			statusCode, _, returnedBody := patch(t, patchURL, &b, headers)
+			assert.Equal(t, tt.expectedStatusCode, statusCode)
+
+			if tt.expectedResponse != nil {
+				coffeeBody := returnedBody["coffee"].(map[string]any)
+				for k, v := range tt.expectedResponse {
+					switch k {
+					case "img":
+						assert.NotEmpty(t, coffeeBody["img"])
+					default:
+						assert.Equal(t, v, coffeeBody[k])
+					}
+				}
+			}
+			if tt.expectedError != nil {
+				assert.Equal(t, tt.expectedError, returnedBody)
+			}
+
+		})
+	}
+
+	t.Run("Updating an item that does not exist returns an error", func(t *testing.T) {
+		// send a patch request to that url
+		headers := map[string]string{
+			"Authorization": fmt.Sprintf("Bearer %s", token),
+		}
+		var b bytes.Buffer
+		writer := multipart.NewWriter(&b)
+		writer.Close()
+		patchURL := fmt.Sprintf("http://localhost:%d/v1/coffees/%d", 3001, 47834957)
+		statusCode, _, _ := patch(t, patchURL, &b, headers)
+		assert.Equal(t, http.StatusNotFound, statusCode)
+	})
+
+	t.Run("Updating an item that the user does not own returns an error", func(t *testing.T) {
+
+		// create and log into new user
+		createUser(t)
+		res := authenticateUser(t, "test@example.com", "password")
+		newToken := res["authentication_token"].(map[string]any)["token"].(string)
+
+		// create coffee as that user
+		returnedBody := createCoffee(t, newToken, mockCoffee, []byte("Test Image"))
+		newPostedCoffeeID := int(returnedBody["coffee"].(map[string]any)["id"].(float64))
+
+		// send a patch request to that url
+		var b bytes.Buffer
+		writer := multipart.NewWriter(&b)
+
+		// send patch request as the old user on the new record
+		headers := map[string]string{
+			"Authorization": fmt.Sprintf("Bearer %s", token),
+			"Content-Type":  writer.FormDataContentType(),
+		}
+		writer.Close()
+
+		patchURL := fmt.Sprintf("http://localhost:%d/v1/coffees/%d", 3001, newPostedCoffeeID)
+		statusCode, _, _ := patch(t, patchURL, &b, headers)
+		assert.Equal(t, http.StatusNotFound, statusCode)
+	})
+
+	t.Run("Unauthenticated user updating a coffee returns an error", func(t *testing.T) {
+		patchURL := fmt.Sprintf("http://localhost:%d/v1/coffees/%d", 3001, 1)
+		// send a patch request to that url
+		var b bytes.Buffer
+		writer := multipart.NewWriter(&b)
+
+		// send patch request as the old user on the new record
+		headers := map[string]string{
+			"Content-Type": writer.FormDataContentType(),
+		}
+		writer.Close()
+		statusCode, _, _ := patch(t, patchURL, &b, headers)
+		assert.Equal(t, http.StatusUnauthorized, statusCode)
+	})
+
+	t.Run("Sending a patch request that is not a multi part form returns an error", func(t *testing.T) {
+		patchURL := fmt.Sprintf("http://localhost:%d/v1/coffees/%d", 3001, 1)
+		// send a patch request to that url
+		var b bytes.Buffer
+		writer := multipart.NewWriter(&b)
+
+		// send patch request as the old user on the new record
+		headers := map[string]string{
+			"Authorization": fmt.Sprintf("Bearer %s", token),
+		}
+		writer.Close()
+		statusCode, _, returnedBody := patch(t, patchURL, &b, headers)
+		assert.Equal(t, http.StatusBadRequest, statusCode)
+		assert.Equal(t, map[string]any{
+			"error": "content type must be multipart/form-data",
+		}, returnedBody)
+	})
+}
+
 //func TestDeleteCoffee(t *testing.T) {
 //	cleanup, _, err := LaunchTestProgram(port)
 //	if err != nil {
