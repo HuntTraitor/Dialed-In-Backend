@@ -41,7 +41,6 @@ func ValidateCoffee(v *validator.Validator, coffee *Coffee) {
 	v.Check(len(coffee.Description) <= 1000, "description", "must not be more than 1000 bytes long")
 	v.Check(len(coffee.Region) <= 100, "region", "must not be more than 100 bytes long")
 	v.Check(len(coffee.Process) <= 200, "process", "must not be more than 200 bytes long")
-	v.Check(len(coffee.Img) <= 8192, "img", "must not be more than 8192 bytes long")
 }
 
 func (m CoffeeModel) GetAllForUser(userID int64) ([]*Coffee, error) {

@@ -12,6 +12,10 @@ import (
 	"time"
 )
 
+const (
+	port = "3001"
+)
+
 // post takes an url and body and returns a status code, headers, and a json body
 func post(t *testing.T, url string, body io.Reader, headers map[string]string) (int, http.Header, map[string]any) {
 	req, err := http.NewRequest(http.MethodPost, url, body)

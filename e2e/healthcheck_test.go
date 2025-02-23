@@ -12,10 +12,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const (
-	port = "3001"
-)
-
 func TestHealthcheck(t *testing.T) {
 	cleanup, _, err := LaunchTestProgram(port)
 	if err != nil {

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"github.com/hunttraitor/dialed-in-backend/internal/s3"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
@@ -51,13 +52,30 @@ func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	coffee := &data.Coffee{
+		Name:        r.Form.Get("name"),
+		Region:      r.Form.Get("region"),
+		Process:     r.Form.Get("process"),
+		Description: r.Form.Get("description"),
+	}
+
+	// validate the input
+	v := validator.New()
+
+	fmt.Println("hi")
+
 	// extract image from form
 	img, handler, err := r.FormFile("img")
 	if err != nil {
-		app.badRequestResponse(w, r, err)
+		v.AddError("img", "must be provided")
+	} else {
+		defer img.Close()
+	}
+
+	if data.ValidateCoffee(v, coffee); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
-	defer img.Close()
 
 	// convert image to byte buffer
 	var buf bytes.Buffer
@@ -79,21 +97,7 @@ func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Reque
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-
-	coffee := &data.Coffee{
-		Name:        r.Form.Get("name"),
-		Region:      r.Form.Get("region"),
-		Process:     r.Form.Get("process"),
-		Img:         fileName,
-		Description: r.Form.Get("description"),
-	}
-
-	// validate the input
-	v := validator.New()
-	if data.ValidateCoffee(v, coffee); !v.Valid() {
-		app.failedValidationResponse(w, r, v.Errors)
-		return
-	}
+	coffee.Img = fileName
 
 	coffee, err = app.models.Coffees.Insert(user.ID, coffee)
 	if err != nil {
