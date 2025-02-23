@@ -186,30 +186,31 @@ func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	err = r.ParseMultipartForm(10 << 20)
+	var input struct {
+		Name        *string `form:"name"`
+		Region      *string `form:"region"`
+		Process     *string `form:"process"`
+		Description *string `form:"description"`
+		Image       []byte  `form:"image"`
+	}
+
+	err = app.readMultipart(w, r, &input)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
 		return
 	}
 
-	// Extract form values as pointers
-	name := GetOptionalString(r, "name")
-	region := GetOptionalString(r, "region")
-	process := GetOptionalString(r, "process")
-	description := GetOptionalString(r, "description")
-
-	// update the fields
-	if name != nil {
-		coffee.Name = *name
+	if input.Name != nil {
+		coffee.Name = *input.Name
 	}
-	if region != nil {
-		coffee.Region = *region
+	if input.Region != nil {
+		coffee.Region = *input.Region
 	}
-	if process != nil {
-		coffee.Process = *process
+	if input.Process != nil {
+		coffee.Process = *input.Process
 	}
-	if description != nil {
-		coffee.Description = *description
+	if input.Description != nil {
+		coffee.Description = *input.Description
 	}
 
 	// check if an image is uploaded and if so replace the image
