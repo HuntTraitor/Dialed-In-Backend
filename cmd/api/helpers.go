@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/form"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"io"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 )
@@ -140,6 +142,66 @@ func (app *application) readInt(qs url.Values, key string, defaultValue int, v *
 		return defaultValue
 	}
 	return i
+}
+
+// readMultipart reads and decodes multipart form data into dst
+func (app *application) readMultipart(w http.ResponseWriter, r *http.Request, dst any) error {
+	// Limit the request body size
+	maxBytes := 10 << 20
+	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
+
+	// Parse multipart form
+	err := r.ParseMultipartForm(int64(maxBytes))
+	if err != nil {
+		if errors.Is(err, http.ErrNotMultipart) {
+			return errors.New("content type must be multipart/form-data")
+		} else if err.Error() == "http: request body too large" {
+			return fmt.Errorf("body must not be larger than %d bytes", maxBytes)
+		}
+		return fmt.Errorf("error parsing multipart form: %w", err)
+	}
+
+	// Dynamically extract allowed fields from the struct
+	allowedFields := getAllowedFields(dst)
+
+	// Validate fields
+	for key := range r.MultipartForm.Value {
+		if _, exists := allowedFields[key]; !exists {
+			return fmt.Errorf("body contains unknown key %q", key)
+		}
+	}
+
+	// Decode form fields into struct
+	decoder := form.NewDecoder()
+	if err := decoder.Decode(dst, r.MultipartForm.Value); err != nil {
+		if strings.HasPrefix(err.Error(), "form: unknown field ") {
+			fieldName := strings.TrimPrefix(err.Error(), "form: unknown field ")
+			return fmt.Errorf("body contains unknown key %q", fieldName)
+		}
+		return fmt.Errorf("failed to decode form data: %w", err)
+	}
+
+	return nil
+}
+
+// getAllowedFields extracts struct field names based on `form` tags.
+func getAllowedFields(dst any) map[string]struct{} {
+	allowedFields := make(map[string]struct{})
+	v := reflect.TypeOf(dst)
+
+	// Ensure we handle a pointer to struct
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+
+	// Iterate through struct fields
+	for i := 0; i < v.NumField(); i++ {
+		tag := v.Field(i).Tag.Get("form")
+		if tag != "" {
+			allowedFields[tag] = struct{}{}
+		}
+	}
+	return allowedFields
 }
 
 // background spins up a job to in a new goroutine with proper panic recovery

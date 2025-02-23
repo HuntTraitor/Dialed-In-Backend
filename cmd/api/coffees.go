@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"github.com/hunttraitor/dialed-in-backend/internal/s3"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
@@ -45,24 +44,23 @@ func (app *application) listCoffeesHandler(w http.ResponseWriter, r *http.Reques
 func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Request) {
 	user := app.contextGetUser(r)
 
+	var input struct {
+		Name        string `form:"name"`
+		Region      string `form:"region"`
+		Process     string `form:"process"`
+		Description string `form:"description"`
+		Image       []byte `form:"image"`
+	}
+
 	// limit 10mb
-	err := r.ParseMultipartForm(10 << 20)
+	err := app.readMultipart(w, r, &input)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
 		return
 	}
 
-	coffee := &data.Coffee{
-		Name:        r.Form.Get("name"),
-		Region:      r.Form.Get("region"),
-		Process:     r.Form.Get("process"),
-		Description: r.Form.Get("description"),
-	}
-
 	// validate the input
 	v := validator.New()
-
-	fmt.Println("hi")
 
 	// extract image from form
 	img, handler, err := r.FormFile("img")
@@ -70,6 +68,13 @@ func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Reque
 		v.AddError("img", "must be provided")
 	} else {
 		defer img.Close()
+	}
+
+	coffee := &data.Coffee{
+		Name:        r.Form.Get("name"),
+		Region:      r.Form.Get("region"),
+		Process:     r.Form.Get("process"),
+		Description: r.Form.Get("description"),
 	}
 
 	if data.ValidateCoffee(v, coffee); !v.Valid() {
