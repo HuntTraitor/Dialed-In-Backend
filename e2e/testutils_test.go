@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"regexp"
 	"strings"
@@ -265,4 +267,36 @@ func activateUser(t *testing.T, token string) map[string]any {
 	requestURL := fmt.Sprintf("http://localhost:%d/v1/users/activated", 3001)
 	_, _, body := put(t, requestURL, strings.NewReader(payload))
 	return body
+}
+
+func createCoffee(t *testing.T, authToken string, coffee data.Coffee, image []byte) map[string]any {
+	t.Helper()
+	requestURL := fmt.Sprintf("http://localhost:%d/v1/coffees", 3001)
+
+	var b bytes.Buffer
+	writer := multipart.NewWriter(&b)
+
+	// Add form fields
+	writer.WriteField("name", coffee.Name)
+	writer.WriteField("region", coffee.Region)
+	writer.WriteField("process", coffee.Process)
+	writer.WriteField("description", coffee.Description)
+
+	// Add image as a form file
+	fileWriter, err := writer.CreateFormFile("img", "Test Image")
+	if err != nil {
+		t.Fatalf("failed to create form file: %v", err)
+	}
+	fileWriter.Write(image) // Write mock image data
+
+	headers := map[string]string{
+		"Authorization": fmt.Sprintf("Bearer %s", authToken),
+		"Content-Type":  writer.FormDataContentType(),
+	}
+
+	writer.Close()
+
+	// Send the request and get the response
+	_, _, returnedBody := post(t, requestURL, &b, headers)
+	return returnedBody
 }
