@@ -16,11 +16,9 @@ func TestGetAll(t *testing.T) {
 			expectedResult: []Method{
 				{
 					Name: "Pour Over",
-					Img:  "https://example.com/images/pour_over.png",
 				},
 				{
 					Name: "Hario Switch",
-					Img:  "https://example.com/images/hario_switch.png",
 				},
 			},
 		},
@@ -37,7 +35,6 @@ func TestGetAll(t *testing.T) {
 
 			for i := range methods {
 				assert.Equal(t, tt.expectedResult[i].Name, methods[i].Name)
-				assert.NotEmpty(t, methods[i].Img)
 			}
 		})
 	}

@@ -9,7 +9,6 @@ import (
 type Method struct {
 	ID        int64  `json:"id"`
 	Name      string `json:"name"`
-	Img       string `json:"img"`
 	CreatedAt string `json:"created_at"`
 }
 
@@ -42,7 +41,6 @@ func (m MethodModel) GetAll() ([]*Method, error) {
 			&method.ID,
 			&method.CreatedAt,
 			&method.Name,
-			&method.Img,
 		)
 		if err != nil {
 			return nil, err

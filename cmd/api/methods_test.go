@@ -25,13 +25,11 @@ func TestListMethodsHandler(t *testing.T) {
 				{
 					ID:        1,
 					Name:      "Mock Method 1",
-					Img:       "https://example.com/img1.png",
 					CreatedAt: "2025-01-25 00:28:23 +00:00",
 				},
 				{
 					ID:        2,
 					Name:      "Mock Method 2",
-					Img:       "https://example.com/img2.png",
 					CreatedAt: "2025-01-25 00:28:23 +00:00",
 				},
 			},
@@ -50,7 +48,6 @@ func TestListMethodsHandler(t *testing.T) {
 			for i, item := range methods {
 				method := item.(map[string]any)
 				assert.Equal(t, tt.expectedMethods[i].Name, method["name"])
-				assert.Equal(t, tt.expectedMethods[i].Img, method["img"])
 			}
 		})
 	}
