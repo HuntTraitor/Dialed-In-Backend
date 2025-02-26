@@ -147,7 +147,7 @@ func (app *application) readInt(qs url.Values, key string, defaultValue int, v *
 // readMultipart reads and decodes multipart form data into dst
 func (app *application) readMultipart(w http.ResponseWriter, r *http.Request, dst any) error {
 	// Limit the request body size
-	maxBytes := 10 << 20
+	maxBytes := 1 << 20
 	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
 
 	// Parse multipart form
