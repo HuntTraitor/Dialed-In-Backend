@@ -8,5 +8,7 @@ func NewMockModels() data.Models {
 		Users:   MockUserModel{},
 		Tokens:  &MockTokenModel{},
 		Methods: &MockMethodModel{},
+		Coffees: &MockCoffeeModel{},
+		Recipes: &MockRecipeModel{},
 	}
 }

@@ -15,6 +15,7 @@ type Models struct {
 	Tokens  TokenModelInterface
 	Methods MethodModelInterface
 	Coffees CoffeeModelInterface
+	Recipes RecipeModelInterface
 }
 
 // NewModels returns models associated with a real database
@@ -24,5 +25,6 @@ func NewModels(db *sql.DB) Models {
 		Tokens:  TokenModel{DB: db},
 		Methods: MethodModel{DB: db},
 		Coffees: CoffeeModel{DB: db},
+		Recipes: RecipeModel{DB: db},
 	}
 }

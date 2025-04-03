@@ -1,5 +1,7 @@
 package data
 
+import "database/sql"
+
 type Recipe struct {
 	ID       int        `json:"id"`
 	UserID   int        `json:"user_id"`
@@ -20,3 +22,9 @@ type Phase struct {
 	Time   int  `json:"time"`
 	Amount int  `json:"amount"`
 }
+
+type RecipeModel struct {
+	DB *sql.DB
+}
+
+type RecipeModelInterface interface{}
