@@ -4,6 +4,7 @@ import (
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"net/http"
+	"strconv"
 )
 
 func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Request) {
@@ -40,6 +41,42 @@ func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	err = app.writeJSON(w, http.StatusCreated, envelope{"recipe": recipe}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
+func (app *application) listRecipesHandler(w http.ResponseWriter, r *http.Request) {
+	user := app.contextGetUser(r)
+
+	var input struct {
+		CoffeeId int64 `json:"coffee_id"`
+		MethodId int64 `json:"method_id"`
+	}
+
+	qs := r.URL.Query()
+
+	// get the query parameters coffee_id and method_id
+	strCoffeeId, err := strconv.Atoi(qs.Get("coffee_id"))
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+	input.CoffeeId = int64(strCoffeeId)
+	strMethodId, err := strconv.Atoi(qs.Get("method_id"))
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+	input.MethodId = int64(strMethodId)
+
+	recipes, err := app.models.Recipes.GetAllForUser(user.ID, input.CoffeeId, input.MethodId)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"recipes": recipes}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}

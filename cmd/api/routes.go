@@ -79,4 +79,5 @@ func (app *application) loadCoffeeRoutes(router chi.Router) {
 
 func (app *application) loadRecipeRoutes(router chi.Router) {
 	router.With(app.requireAuthenticatedUser).Post("/", app.createRecipeHandler)
+	router.With(app.requireAuthenticatedUser).Get("/", app.listRecipesHandler)
 }

@@ -56,6 +56,7 @@ func ValidatePhase(v *validator.Validator, phase *Phase) {
 
 type RecipeModelInterface interface {
 	Insert(recipe *Recipe) error
+	GetAllForUser(userID int64, methodID int64, coffeeID int64) ([]*Recipe, error)
 }
 
 func (m RecipeModel) Insert(recipe *Recipe) error {
@@ -77,4 +78,51 @@ func (m RecipeModel) Insert(recipe *Recipe) error {
 		return err
 	}
 	return nil
+}
+
+func (m RecipeModel) GetAllForUser(userID int64, methodID int64, coffeeID int64) ([]*Recipe, error) {
+	query := `SELECT * FROM recipes 
+         		WHERE user_id = $1
+         		AND (method_id = $2 OR $2 = 0)
+         		AND (coffee_id = $3 OR $3 = 0)
+         		ORDER BY id`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	rows, err := m.DB.QueryContext(ctx, query, userID, methodID, coffeeID)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	recipes := []*Recipe{}
+	var infoBytes []byte
+
+	for rows.Next() {
+		var recipe Recipe
+		err = rows.Scan(
+			&recipe.ID,
+			&recipe.UserID,
+			&recipe.CoffeeID,
+			&recipe.MethodID,
+			&infoBytes,
+			&recipe.Version,
+			&recipe.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		err = json.Unmarshal(infoBytes, &recipe.Info)
+		if err != nil {
+			return nil, err
+		}
+		recipes = append(recipes, &recipe)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return recipes, nil
 }
