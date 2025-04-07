@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"time"
 )
@@ -50,7 +51,7 @@ func ValidateRecipe(v *validator.Validator, recipe *Recipe) {
 // ValidatePhase validates a phase is the correct format
 func ValidatePhase(v *validator.Validator, phase *Phase) {
 	v.Check(phase.Time > 0, "time", "must be greater than zero")
-	v.Check(phase.Amount > 0, "amount", "must be greater than zero")
+	v.Check(phase.Amount >= 0, "amount", "must be greater than or equal to zero")
 }
 
 type RecipeModelInterface interface {
@@ -58,14 +59,20 @@ type RecipeModelInterface interface {
 }
 
 func (m RecipeModel) Insert(recipe *Recipe) error {
-	query := `INSERT INTO recipes (user_id, method_id, coffee_id, info) VALUES ($1, $2, $3, $4)`
+	query := `INSERT INTO recipes (user_id, method_id, coffee_id, info) VALUES ($1, $2, $3, $4) 
+            RETURNING id, created_at, version`
 
-	args := []any{recipe.UserID, recipe.MethodID, recipe.CoffeeID, recipe.Info}
+	infoJSON, err := json.Marshal(recipe.Info)
+	if err != nil {
+		return err
+	}
+
+	args := []any{recipe.UserID, recipe.MethodID, recipe.CoffeeID, infoJSON}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&recipe.ID, &recipe.CreatedAt, &recipe.Version)
+	err = m.DB.QueryRowContext(ctx, query, args...).Scan(&recipe.ID, &recipe.CreatedAt, &recipe.Version)
 	if err != nil {
 		return err
 	}
