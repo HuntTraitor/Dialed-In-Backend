@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS recipes (
     coffee_id bigint NOT NULL REFERENCES coffees ON DELETE CASCADE,
     method_id bigint NOT NULL REFERENCES methods ON DELETE CASCADE,
     info jsonb,
-    version int NOT NULL DEFAULT 1
+    version int NOT NULL DEFAULT 1,
+    created_at timestamp(0) with time zone NOT NULL DEFAULT NOW()
 );
 -- +goose StatementEnd
 
