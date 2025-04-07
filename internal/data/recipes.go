@@ -8,10 +8,10 @@ import (
 )
 
 type Recipe struct {
-	ID        int        `json:"id"`
-	UserID    int        `json:"user_id"`
-	MethodID  int        `json:"method_id"`
-	CoffeeID  int        `json:"coffee_id"`
+	ID        int64      `json:"id"`
+	UserID    int64      `json:"user_id"`
+	MethodID  int64      `json:"method_id"`
+	CoffeeID  int64      `json:"coffee_id"`
 	Info      RecipeInfo `json:"info"`
 	CreatedAt string     `json:"created_at"`
 	Version   int        `json:"version"`
@@ -67,12 +67,7 @@ func (m RecipeModel) Insert(recipe *Recipe) error {
 
 	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&recipe.ID, &recipe.CreatedAt, &recipe.Version)
 	if err != nil {
-		switch {
-		case err.Error() == `pq: duplicate key value violates unique constraint "users_email_key"`:
-			return ErrDuplicateEmail
-		default:
-			return err
-		}
+		return err
 	}
 	return nil
 }
