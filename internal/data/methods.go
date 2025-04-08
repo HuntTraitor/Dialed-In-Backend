@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 )
 
@@ -18,6 +19,7 @@ type MethodModel struct {
 
 type MethodModelInterface interface {
 	GetAll() ([]*Method, error)
+	GetOne(id int64) (*Method, error)
 }
 
 func (m MethodModel) GetAll() ([]*Method, error) {
@@ -52,4 +54,26 @@ func (m MethodModel) GetAll() ([]*Method, error) {
 		return nil, err
 	}
 	return methods, nil
+}
+
+func (m MethodModel) GetOne(id int64) (*Method, error) {
+	query := `SELECT * FROM methods WHERE id = $1`
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	row := m.DB.QueryRowContext(ctx, query, id)
+	var method Method
+	err := row.Scan(
+		&method.ID,
+		&method.CreatedAt,
+		&method.Name,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+	return &method, nil
 }

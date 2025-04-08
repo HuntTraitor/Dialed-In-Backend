@@ -67,6 +67,7 @@ func (app *application) loadDebugRoutes(router chi.Router) {
 
 func (app *application) loadMethodRoutes(router chi.Router) {
 	router.Get("/", app.listMethodsHandler)
+	router.Get("/{id}", app.getMethodHandler)
 }
 
 func (app *application) loadCoffeeRoutes(router chi.Router) {
