@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"net/http"
@@ -56,19 +57,27 @@ func (app *application) listRecipesHandler(w http.ResponseWriter, r *http.Reques
 
 	qs := r.URL.Query()
 
-	// get the query parameters coffee_id and method_id
-	strCoffeeId, err := strconv.Atoi(qs.Get("coffee_id"))
-	if err != nil {
-		app.badRequestResponse(w, r, err)
-		return
+	// Parse coffee_id
+	strCoffeeId := qs.Get("coffee_id")
+	if strCoffeeId != "" {
+		coffeeId, err := strconv.Atoi(strCoffeeId)
+		if err != nil {
+			app.badRequestResponse(w, r, fmt.Errorf("invalid coffee_id: %w", err))
+			return
+		}
+		input.CoffeeId = int64(coffeeId)
 	}
-	input.CoffeeId = int64(strCoffeeId)
-	strMethodId, err := strconv.Atoi(qs.Get("method_id"))
-	if err != nil {
-		app.badRequestResponse(w, r, err)
-		return
+
+	// Parse method_id
+	strMethodId := qs.Get("method_id")
+	if strMethodId != "" {
+		methodId, err := strconv.Atoi(strMethodId)
+		if err != nil {
+			app.badRequestResponse(w, r, fmt.Errorf("invalid method_id: %w", err))
+			return
+		}
+		input.MethodId = int64(methodId)
 	}
-	input.MethodId = int64(strMethodId)
 
 	recipes, err := app.models.Recipes.GetAllForUser(user.ID, input.CoffeeId, input.MethodId)
 	if err != nil {
@@ -76,7 +85,29 @@ func (app *application) listRecipesHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	err = app.writeJSON(w, http.StatusOK, envelope{"recipes": recipes}, nil)
+	var fullRecipes []*data.FullRecipe
+
+	for _, recipe := range recipes {
+		coffee, err := app.models.Coffees.GetOne(recipe.CoffeeID, recipe.UserID)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+
+		fullRecipe := &data.FullRecipe{
+			ID:        recipe.ID,
+			UserID:    recipe.UserID,
+			MethodID:  recipe.MethodID,
+			Coffee:    *coffee,
+			Info:      recipe.Info,
+			CreatedAt: recipe.CreatedAt,
+			Version:   recipe.Version,
+		}
+
+		fullRecipes = append(fullRecipes, fullRecipe)
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"recipes": fullRecipes}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}

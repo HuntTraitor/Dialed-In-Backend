@@ -18,6 +18,16 @@ type Recipe struct {
 	Version   int        `json:"version"`
 }
 
+type FullRecipe struct {
+	ID        int64      `json:"id"`
+	UserID    int64      `json:"user_id"`
+	MethodID  int64      `json:"method"`
+	Coffee    Coffee     `json:"coffee"`
+	Info      RecipeInfo `json:"info"`
+	CreatedAt string     `json:"created_at"`
+	Version   int        `json:"version"`
+}
+
 type RecipeInfo struct {
 	Name   string  `json:"name"`
 	GramIn int     `json:"grams_in"`
