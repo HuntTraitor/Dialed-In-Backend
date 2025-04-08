@@ -21,7 +21,7 @@ type Recipe struct {
 type FullRecipe struct {
 	ID        int64      `json:"id"`
 	UserID    int64      `json:"user_id"`
-	MethodID  int64      `json:"method"`
+	Method    Method     `json:"method"`
 	Coffee    Coffee     `json:"coffee"`
 	Info      RecipeInfo `json:"info"`
 	CreatedAt string     `json:"created_at"`

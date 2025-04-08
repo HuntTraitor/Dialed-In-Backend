@@ -94,10 +94,16 @@ func (app *application) listRecipesHandler(w http.ResponseWriter, r *http.Reques
 			return
 		}
 
+		method, err := app.models.Methods.GetOne(recipe.MethodID)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+
 		fullRecipe := &data.FullRecipe{
 			ID:        recipe.ID,
 			UserID:    recipe.UserID,
-			MethodID:  recipe.MethodID,
+			Method:    *method,
 			Coffee:    *coffee,
 			Info:      recipe.Info,
 			CreatedAt: recipe.CreatedAt,
