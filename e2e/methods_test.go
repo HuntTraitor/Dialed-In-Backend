@@ -55,5 +55,6 @@ func TestGetAllMethods(t *testing.T) {
 			}
 		})
 	}
-
 }
+
+// TODO test for GetOneMethod
