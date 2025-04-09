@@ -2,7 +2,6 @@ package e2e
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"github.com/stretchr/testify/assert"
@@ -37,17 +36,12 @@ func TestGetAllCoffees(t *testing.T) {
 			"Authorization": fmt.Sprintf("Bearer %s", token),
 		}
 		statusCode, _, respBody := get(t, requestURL, requestHeaders)
-		var body map[string]any
-		err = json.Unmarshal([]byte(respBody), &body)
-		if err != nil {
-			t.Fatal(err)
-		}
 
 		// assert status codes are equal
 		assert.Equal(t, http.StatusOK, statusCode)
 
 		// assert body is correct
-		coffees := body["coffees"].([]any)
+		coffees := respBody["coffees"].([]any)
 		for _, coffee := range coffees {
 			c := coffee.(map[string]any)
 			assert.NotEmpty(t, c["id"].(float64))
@@ -66,15 +60,10 @@ func TestGetAllCoffees(t *testing.T) {
 		// Send request with no auth header
 		requestURL := fmt.Sprintf("http://localhost:%d/v1/coffees", 3001)
 		statusCode, _, respBody := get(t, requestURL, nil)
-		var body map[string]any
-		err = json.Unmarshal([]byte(respBody), &body)
-		if err != nil {
-			t.Fatal(err)
-		}
 
 		// Assert there is a failed response
 		assert.Equal(t, http.StatusUnauthorized, statusCode)
-		assert.Equal(t, "you must be authenticated to access this resource", body["error"].(string))
+		assert.Equal(t, "you must be authenticated to access this resource", respBody["error"].(string))
 	})
 }
 

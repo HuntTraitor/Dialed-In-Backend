@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"net/http"
@@ -279,19 +278,13 @@ func TestVerifyUser(t *testing.T) {
 			statusCode, _, returnedBody := get(t, requestURL, headers)
 			assert.Equal(t, tt.expectedStatusCode, statusCode)
 
-			var body map[string]any
-			err := json.Unmarshal([]byte(returnedBody), &body)
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			if tt.expectedWrapper == "" {
-				assert.Contains(t, body["error"], tt.expectedResponse["error"])
+				assert.Contains(t, returnedBody["error"], tt.expectedResponse["error"])
 				return
 			}
 
-			assert.NotEmpty(t, body[tt.expectedWrapper])
-			actualContent := body[tt.expectedWrapper].(map[string]any)
+			assert.NotEmpty(t, returnedBody[tt.expectedWrapper])
+			actualContent := returnedBody[tt.expectedWrapper].(map[string]any)
 			expectedContent := tt.expectedResponse[tt.expectedWrapper].(map[string]any)
 
 			for k, v := range actualContent {
