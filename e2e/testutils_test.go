@@ -104,7 +104,7 @@ func patch(t *testing.T, url string, body io.Reader, headers map[string]string) 
 }
 
 // get sends a get request to a certain urlPath with some headers
-func get(t *testing.T, urlPath string, headers map[string]string) (int, http.Header, string) {
+func get(t *testing.T, urlPath string, headers map[string]string) (int, http.Header, map[string]any) {
 	t.Helper()
 
 	// Create a new GET request
@@ -130,8 +130,13 @@ func get(t *testing.T, urlPath string, headers map[string]string) (int, http.Hea
 	if err != nil {
 		t.Fatal(err)
 	}
-	body = bytes.TrimSpace(body)
-	return rs.StatusCode, rs.Header, string(body)
+
+	var responseBody map[string]any
+	err = json.Unmarshal(body, &responseBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rs.StatusCode, rs.Header, responseBody
 }
 
 // delete sends a delete request to a certain urlPath with some headers
