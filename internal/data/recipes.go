@@ -36,9 +36,9 @@ type RecipeInfo struct {
 }
 
 type Phase struct {
-	Open   bool `json:"open"`
-	Time   int  `json:"time"`
-	Amount int  `json:"amount"`
+	Open   *bool `json:"open"`
+	Time   int   `json:"time"`
+	Amount int   `json:"amount"`
 }
 
 type RecipeModel struct {
@@ -60,6 +60,7 @@ func ValidateRecipe(v *validator.Validator, recipe *Recipe) {
 
 // ValidatePhase validates a phase is the correct format
 func ValidatePhase(v *validator.Validator, phase *Phase) {
+	v.Check(phase.Open != nil, "open", "must be provided")
 	v.Check(phase.Time > 0, "time", "must be greater than zero")
 	v.Check(phase.Amount >= 0, "amount", "must be greater than or equal to zero")
 }
