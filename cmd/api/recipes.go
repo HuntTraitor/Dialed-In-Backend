@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
@@ -36,12 +37,45 @@ func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	coffee, err := app.models.Coffees.GetOne(recipe.CoffeeID, recipe.UserID)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	method, err := app.models.Methods.GetOne(recipe.MethodID)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
 	err = app.models.Recipes.Insert(recipe)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	err = app.writeJSON(w, http.StatusCreated, envelope{"recipe": recipe}, nil)
+
+	fullRecipe := &data.FullRecipe{
+		ID:        recipe.ID,
+		UserID:    recipe.UserID,
+		Method:    *method,
+		Coffee:    *coffee,
+		Info:      recipe.Info,
+		CreatedAt: recipe.CreatedAt,
+		Version:   recipe.Version,
+	}
+
+	err = app.writeJSON(w, http.StatusCreated, envelope{"recipe": fullRecipe}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
