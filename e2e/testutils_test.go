@@ -222,6 +222,12 @@ func waitFor(t *testing.T, condition func() bool) {
 	}
 }
 
+// boolPtr takes a boolean and returns to pointer to that boolean
+// Mainly used for initialing data.Phase
+func boolPtr(b bool) *bool {
+	return &b
+}
+
 // extractToken takes an email body from mailhog and returns the token inside of that body
 func extractToken(t *testing.T, emailContent string) string {
 	t.Helper()
@@ -304,4 +310,20 @@ func createCoffee(t *testing.T, authToken string, coffee data.Coffee, image []by
 	// Send the request and get the response
 	_, _, returnedBody := post(t, requestURL, &b, headers)
 	return returnedBody
+}
+
+// createRecipe sends a post request using an authToken and returns the body
+func createRecipe(t *testing.T, authToken string, recipe data.Recipe) map[string]any {
+	t.Helper()
+	requestURL := fmt.Sprintf("http://localhost:%d/v1/recipes", 3001)
+	payloadBytes, err := json.Marshal(recipe)
+	if err != nil {
+		t.Fatalf("failed to marshal payload: %v", err)
+	}
+	requestHeaders := map[string]string{
+		"Authorization": fmt.Sprintf("Bearer %s", authToken),
+	}
+
+	_, _, body := post(t, requestURL, bytes.NewReader(payloadBytes), requestHeaders)
+	return body
 }
