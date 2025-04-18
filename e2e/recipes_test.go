@@ -322,5 +322,71 @@ func TestCreateRecipe(t *testing.T) {
 
 // TODO TestListRecipes
 func TestListRecipes(t *testing.T) {
+	cleanup, _, err := LaunchTestProgram(port)
+	if err != nil {
+		t.Fatalf("failed to launch test program: %v", err)
+	}
+	t.Cleanup(cleanup)
 
+	authenticateBody := authenticateUser(t, "hunter@gmail.com", "password")
+	token := authenticateBody["authentication_token"].(map[string]any)["token"].(string)
+
+	// create a new coffee to attach the recipe to
+	insertedCoffee := data.Coffee{
+		Name:        "Test Coffee",
+		Region:      "Test Region",
+		Process:     "Test Process",
+		Description: "Test Description",
+		Img:         "Test Image",
+	}
+	createCoffee(t, token, insertedCoffee, []byte(insertedCoffee.Img))
+
+	insertedRecipe := data.Recipe{
+		CoffeeID: 1,
+		MethodID: 1,
+		Info: data.RecipeInfo{
+			Name:   "Test Recipe",
+			GramIn: 20,
+			MlOut:  320,
+			Phases: []data.Phase{
+				{
+					Open:   boolPtr(true),
+					Time:   45,
+					Amount: 160,
+				},
+				{
+					Open:   boolPtr(false),
+					Time:   75,
+					Amount: 320,
+				},
+				{
+					Open:   boolPtr(true),
+					Time:   60,
+					Amount: 0,
+				},
+			},
+		},
+	}
+
+	// create a recipe
+	_ = createRecipe(t, token, insertedRecipe)
+
+	t.Run("Successfully gets all recipes with no query parameters", func(t *testing.T) {
+		requestURL := fmt.Sprintf("http://localhost:%d/v1/recipes", 3001)
+		requestHeaders := map[string]string{
+			"Authorization": fmt.Sprintf("Bearer %s", token),
+		}
+		statusCode, _, respBody := get(t, requestURL, requestHeaders)
+		assert.Equal(t, http.StatusOK, statusCode)
+		recipes := respBody["recipes"].([]any)
+		for _, recipe := range recipes {
+			r := recipe.(map[string]any)
+			assert.Equal(t, insertedRecipe.Info.Name, r["info"].(map[string]any)["name"])
+			assert.Equal(t, insertedRecipe.Info.GramIn, r["info"].(map[string]any)["gram_in"])
+			assert.Equal(t, insertedRecipe.Info.MlOut, r["info"].(map[string]any)["ml_out"])
+			assert.Equal(t, insertedRecipe.Info.Phases, r["info"].(map[string]any)["phases"])
+			assert.NotEmpty(t, r["coffee"].(map[string]any)["id"])
+			assert.NotEmpty(t, r["method"].(map[string]any)["id"])
+		}
+	})
 }
