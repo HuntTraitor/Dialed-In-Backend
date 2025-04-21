@@ -390,4 +390,49 @@ func TestListRecipes(t *testing.T) {
 			assert.NotEmpty(t, r["method"].(map[string]any)["id"])
 		}
 	})
+
+	queryTests := []struct {
+		name           string
+		requestURL     string
+		expectedLength int
+	}{
+		{
+			name:           "Successfully fails to get recipes with one coffeeId query parameter",
+			requestURL:     fmt.Sprintf("http://localhost:%d/v1/recipes?coffee_id=0", 3001),
+			expectedLength: 0,
+		},
+		{
+			name:           "Successfully fails to get recipes with one method Id query parameter",
+			requestURL:     fmt.Sprintf("http://localhost:%d/v1/recipes?method_id=0", 3001),
+			expectedLength: 0,
+		},
+		{
+			name:           "successfully fails to get recipes with one good and one bad query parameter",
+			requestURL:     fmt.Sprintf("http://localhost:%d/v1/recipes?coffee_id=1&method_id=17", 3001),
+			expectedLength: 0,
+		},
+		{
+			name:           "successfully gets recipes with both query parameters",
+			requestURL:     fmt.Sprintf("http://localhost:%d/v1/recipes?coffee_id=1&method_id=1", 3001),
+			expectedLength: 1,
+		},
+	}
+
+	for _, queryTest := range queryTests {
+		t.Run(queryTest.name, func(t *testing.T) {
+			requestHeaders := map[string]string{
+				"Authorization": fmt.Sprintf("Bearer %s", token),
+			}
+			statusCode, _, respBody := get(t, queryTest.requestURL, requestHeaders)
+			assert.Equal(t, http.StatusOK, statusCode)
+			recipes := respBody["recipes"].([]any)
+			assert.Equal(t, queryTest.expectedLength, len(recipes))
+		})
+	}
+
+	t.Run("Fails to get recipes with a 403 if user is unauthenticated", func(t *testing.T) {
+		requestURL := fmt.Sprintf("http://localhost:%d/v1/recipes?coffee_id=1", 3001)
+		statusCode, _, _ := get(t, requestURL, nil)
+		assert.Equal(t, http.StatusUnauthorized, statusCode)
+	})
 }
