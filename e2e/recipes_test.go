@@ -381,10 +381,11 @@ func TestListRecipes(t *testing.T) {
 		recipes := respBody["recipes"].([]any)
 		for _, recipe := range recipes {
 			r := recipe.(map[string]any)
+			actualPhases := decodePhases(r["info"].(map[string]any)["phases"].([]interface{}))
 			assert.Equal(t, insertedRecipe.Info.Name, r["info"].(map[string]any)["name"])
-			assert.Equal(t, insertedRecipe.Info.GramIn, r["info"].(map[string]any)["gram_in"])
-			assert.Equal(t, insertedRecipe.Info.MlOut, r["info"].(map[string]any)["ml_out"])
-			assert.Equal(t, insertedRecipe.Info.Phases, r["info"].(map[string]any)["phases"])
+			assert.EqualValues(t, insertedRecipe.Info.GramIn, r["info"].(map[string]any)["grams_in"])
+			assert.EqualValues(t, insertedRecipe.Info.MlOut, r["info"].(map[string]any)["ml_out"])
+			assert.EqualValues(t, insertedRecipe.Info.Phases, actualPhases)
 			assert.NotEmpty(t, r["coffee"].(map[string]any)["id"])
 			assert.NotEmpty(t, r["method"].(map[string]any)["id"])
 		}

@@ -327,3 +327,20 @@ func createRecipe(t *testing.T, authToken string, recipe data.Recipe) map[string
 	_, _, body := post(t, requestURL, bytes.NewReader(payloadBytes), requestHeaders)
 	return body
 }
+
+// decodePhases decodes a phase into a comparable object for easy comprisons
+func decodePhases(input []interface{}) []data.Phase {
+	phases := make([]data.Phase, len(input))
+	for i, item := range input {
+		m := item.(map[string]interface{})
+		open := m["open"].(bool)
+		phaseTime := int(m["time"].(float64))
+		amount := int(m["amount"].(float64))
+		phases[i] = data.Phase{
+			Open:   &open,
+			Time:   phaseTime,
+			Amount: amount,
+		}
+	}
+	return phases
+}
