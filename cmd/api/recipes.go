@@ -2,11 +2,9 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"net/http"
-	"strconv"
 )
 
 func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Request) {
@@ -84,42 +82,15 @@ func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Reque
 func (app *application) listRecipesHandler(w http.ResponseWriter, r *http.Request) {
 	user := app.contextGetUser(r)
 
-	var input struct {
-		CoffeeId int64 `json:"coffee_id"`
-		MethodId int64 `json:"method_id"`
-	}
-
 	qs := r.URL.Query()
 
-	// Parse coffee_id
-	strCoffeeId := qs.Get("coffee_id")
-	if strCoffeeId != "" {
-		coffeeId, err := strconv.Atoi(strCoffeeId)
-		if err != nil {
-			app.badRequestResponse(w, r, fmt.Errorf("invalid coffee_id: %w", err))
-			return
-		}
-		input.CoffeeId = int64(coffeeId)
-	}
-
-	// Parse method_id
-	strMethodId := qs.Get("method_id")
-	if strMethodId != "" {
-		methodId, err := strconv.Atoi(strMethodId)
-		if err != nil {
-			app.badRequestResponse(w, r, fmt.Errorf("invalid method_id: %w", err))
-			return
-		}
-		input.MethodId = int64(methodId)
-	}
-
-	recipes, err := app.models.Recipes.GetAllForUser(user.ID, input.CoffeeId, input.MethodId)
+	recipes, err := app.models.Recipes.GetAllForUser(user.ID, qs)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
 
-	var fullRecipes []*data.FullRecipe
+	fullRecipes := []*data.FullRecipe{}
 
 	for _, recipe := range recipes {
 		coffee, err := app.models.Coffees.GetOne(recipe.CoffeeID, recipe.UserID)

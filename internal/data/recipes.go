@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
+	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -67,7 +70,7 @@ func ValidatePhase(v *validator.Validator, phase *Phase) {
 
 type RecipeModelInterface interface {
 	Insert(recipe *Recipe) error
-	GetAllForUser(userID int64, methodID int64, coffeeID int64) ([]*Recipe, error)
+	GetAllForUser(userID int64, params url.Values) ([]*Recipe, error)
 }
 
 func (m RecipeModel) Insert(recipe *Recipe) error {
@@ -91,17 +94,39 @@ func (m RecipeModel) Insert(recipe *Recipe) error {
 	return nil
 }
 
-func (m RecipeModel) GetAllForUser(userID int64, methodID int64, coffeeID int64) ([]*Recipe, error) {
-	query := `SELECT * FROM recipes 
-         		WHERE user_id = $1
-         		AND (method_id = $2 OR $2 = 0)
-         		AND (coffee_id = $3 OR $3 = 0)
-         		ORDER BY id`
+func (m RecipeModel) GetAllForUser(userID int64, params url.Values) ([]*Recipe, error) {
+
+	// Edge case if 0 is passed into the query parameter
+	if params.Get("method_id") == "0" || params.Get("coffee_id") == "0" {
+		return []*Recipe{}, nil
+	}
+
+	query := `SELECT * FROM recipes WHERE user_id = $1`
+	args := []any{userID}
+	argIndex := 2
+
+	// Safely parse optional parameters
+	methodID, _ := strconv.ParseInt(params.Get("method_id"), 10, 64)
+	coffeeID, _ := strconv.ParseInt(params.Get("coffee_id"), 10, 64)
+
+	if methodID != 0 {
+		query += fmt.Sprintf(" AND method_id = $%d", argIndex)
+		args = append(args, methodID)
+		argIndex++
+	}
+
+	if coffeeID != 0 {
+		query += fmt.Sprintf(" AND coffee_id = $%d", argIndex)
+		args = append(args, coffeeID)
+		argIndex++
+	}
+
+	query += " ORDER BY id"
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	rows, err := m.DB.QueryContext(ctx, query, userID, methodID, coffeeID)
+	rows, err := m.DB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
