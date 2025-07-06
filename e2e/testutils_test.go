@@ -9,6 +9,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -287,27 +288,49 @@ func createCoffee(t *testing.T, authToken string, coffee data.Coffee, image []by
 	var b bytes.Buffer
 	writer := multipart.NewWriter(&b)
 
-	// Add form fields
-	writer.WriteField("name", coffee.Name)
-	writer.WriteField("region", coffee.Region)
-	writer.WriteField("process", coffee.Process)
-	writer.WriteField("description", coffee.Description)
+	// Write form fields from coffee.Info
+	info := coffee.Info
 
-	// Add image as a form file
-	fileWriter, err := writer.CreateFormFile("img", "Test Image")
+	writeField := func(key, value string) {
+		if err := writer.WriteField(key, value); err != nil {
+			t.Fatalf("failed to write field %s: %v", key, err)
+		}
+	}
+
+	writeField("name", info.Name)
+	writeField("region", info.Region)
+	writeField("process", info.Process)
+	writeField("description", info.Description)
+	writeField("origin_type", info.OriginType)
+	writeField("roast_level", info.RoastLevel)
+	writeField("rating", strconv.Itoa(info.Rating))
+	writeField("cost", fmt.Sprintf("%.2f", info.Cost))
+	writeField("decaff", strconv.FormatBool(info.Decaff))
+
+	// Add tasting_notes as repeated form fields
+	for _, note := range info.TastingNotes {
+		writeField("tasting_notes", note)
+	}
+
+	// Add image file
+	fileWriter, err := writer.CreateFormFile("img", "test_image.jpg")
 	if err != nil {
 		t.Fatalf("failed to create form file: %v", err)
 	}
-	fileWriter.Write(image) // Write mock image data
+	if _, err := fileWriter.Write(image); err != nil {
+		t.Fatalf("failed to write image data: %v", err)
+	}
 
+	// Close the writer before sending
+	writer.Close()
+
+	// Headers
 	headers := map[string]string{
 		"Authorization": fmt.Sprintf("Bearer %s", authToken),
 		"Content-Type":  writer.FormDataContentType(),
 	}
 
-	writer.Close()
-
-	// Send the request and get the response
+	// Send the request and return the parsed body
 	_, _, returnedBody := post(t, requestURL, &b, headers)
 	return returnedBody
 }

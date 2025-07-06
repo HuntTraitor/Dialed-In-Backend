@@ -25,14 +25,14 @@ func (app *application) listCoffeesHandler(w http.ResponseWriter, r *http.Reques
 		imgURL, err = s3.PreSignURL(
 			s3.WithPresigner(app.s3.Presigner),
 			s3.WithPresignBucket(app.config.s3.bucket),
-			s3.WithPresignFilePath("coffees/"+coffee.Img),
+			s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
 			s3.WithPresignExpiration(time.Hour*24),
 		)
 		if err != nil {
 			app.serverErrorResponse(w, r, err)
 			return
 		}
-		coffee.Img = imgURL
+		coffee.Info.Img = imgURL
 	}
 
 	err = app.writeJSON(w, http.StatusOK, envelope{"coffees": coffees}, nil)
@@ -45,11 +45,17 @@ func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Reque
 	user := app.contextGetUser(r)
 
 	var input struct {
-		Name        string `form:"name"`
-		Region      string `form:"region"`
-		Process     string `form:"process"`
-		Description string `form:"description"`
-		Image       []byte `form:"image"`
+		Name         string   `form:"name"`
+		Region       string   `form:"region"`
+		Process      string   `form:"process"`
+		Description  string   `form:"description"`
+		Decaff       bool     `form:"decaff"`
+		OriginType   string   `form:"origin_type"`
+		TastingNotes []string `form:"tasting_notes"`
+		Rating       int      `form:"rating"`
+		RoastLevel   string   `form:"roast_level"`
+		Cost         float64  `form:"cost"`
+		Image        []byte   `form:"image"`
 	}
 
 	// limit 10mb
@@ -71,10 +77,20 @@ func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	coffee := &data.Coffee{
-		Name:        r.Form.Get("name"),
-		Region:      r.Form.Get("region"),
-		Process:     r.Form.Get("process"),
-		Description: r.Form.Get("description"),
+		UserID: int(user.ID),
+		Info: data.CoffeeInfo{
+			Name:         input.Name,
+			Region:       input.Region,
+			Process:      input.Process,
+			Description:  input.Description,
+			Decaff:       input.Decaff,
+			OriginType:   input.OriginType,
+			TastingNotes: input.TastingNotes,
+			Rating:       input.Rating,
+			RoastLevel:   input.RoastLevel,
+			Cost:         float32(input.Cost),
+			// Img will be set from `img` or base64/image path
+		},
 	}
 
 	if data.ValidateCoffee(v, coffee); !v.Valid() {
@@ -102,9 +118,9 @@ func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Reque
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	coffee.Img = fileName
+	coffee.Info.Img = fileName
 
-	coffee, err = app.models.Coffees.Insert(user.ID, coffee)
+	err = app.models.Coffees.Insert(coffee)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -114,14 +130,14 @@ func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Reque
 	imgURL, err := s3.PreSignURL(
 		s3.WithPresigner(app.s3.Presigner),
 		s3.WithPresignBucket(app.config.s3.bucket),
-		s3.WithPresignFilePath("coffees/"+coffee.Img),
+		s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
 		s3.WithPresignExpiration(time.Hour*24),
 	)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	coffee.Img = imgURL
+	coffee.Info.Img = imgURL
 
 	err = app.writeJSON(w, http.StatusCreated, envelope{"coffee": coffee}, nil)
 	if err != nil {
@@ -151,14 +167,14 @@ func (app *application) getCoffeeHandler(w http.ResponseWriter, r *http.Request)
 	imgURL, err := s3.PreSignURL(
 		s3.WithPresigner(app.s3.Presigner),
 		s3.WithPresignBucket(app.config.s3.bucket),
-		s3.WithPresignFilePath("coffees/"+coffee.Img),
+		s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
 		s3.WithPresignExpiration(time.Hour*24),
 	)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	coffee.Img = imgURL
+	coffee.Info.Img = imgURL
 
 	err = app.writeJSON(w, http.StatusOK, envelope{"coffee": coffee}, nil)
 	if err != nil {
@@ -187,11 +203,17 @@ func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	var input struct {
-		Name        *string `form:"name"`
-		Region      *string `form:"region"`
-		Process     *string `form:"process"`
-		Description *string `form:"description"`
-		Image       []byte  `form:"image"`
+		Name         *string   `form:"name"`
+		Region       *string   `form:"region"`
+		Process      *string   `form:"process"`
+		Description  *string   `form:"description"`
+		Decaff       *bool     `form:"decaff"`
+		OriginType   *string   `form:"origin_type"`
+		TastingNotes *[]string `form:"tasting_notes"`
+		Rating       *int      `form:"rating"`
+		RoastLevel   *string   `form:"roast_level"`
+		Cost         *float32  `form:"cost"`
+		Image        []byte    `form:"image"`
 	}
 
 	err = app.readMultipart(w, r, &input)
@@ -201,16 +223,34 @@ func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	if input.Name != nil {
-		coffee.Name = *input.Name
+		coffee.Info.Name = *input.Name
 	}
 	if input.Region != nil {
-		coffee.Region = *input.Region
+		coffee.Info.Region = *input.Region
 	}
 	if input.Process != nil {
-		coffee.Process = *input.Process
+		coffee.Info.Process = *input.Process
 	}
 	if input.Description != nil {
-		coffee.Description = *input.Description
+		coffee.Info.Description = *input.Description
+	}
+	if input.Decaff != nil {
+		coffee.Info.Decaff = *input.Decaff
+	}
+	if input.OriginType != nil {
+		coffee.Info.OriginType = *input.OriginType
+	}
+	if input.TastingNotes != nil {
+		coffee.Info.TastingNotes = *input.TastingNotes
+	}
+	if input.Rating != nil {
+		coffee.Info.Rating = *input.Rating
+	}
+	if input.RoastLevel != nil {
+		coffee.Info.RoastLevel = *input.RoastLevel
+	}
+	if input.Cost != nil {
+		coffee.Info.Cost = *input.Cost
 	}
 
 	// check if an image is uploaded and if so replace the image
@@ -233,14 +273,14 @@ func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Reque
 			s3.WithFile(buf),
 			s3.WithFileType(header.Header),
 			s3.WithFilePath("coffees/"),
-			s3.WithOldFileName(coffee.Img),
+			s3.WithOldFileName(coffee.Info.Img),
 			s3.WithBucket(app.config.s3.bucket),
 		)
 		if err != nil {
 			app.serverErrorResponse(w, r, err)
 			return
 		}
-		coffee.Img = fileName
+		coffee.Info.Img = fileName
 	}
 
 	// validate the new coffee struct
@@ -266,14 +306,14 @@ func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Reque
 	imgURL, err := s3.PreSignURL(
 		s3.WithPresigner(app.s3.Presigner),
 		s3.WithPresignBucket(app.config.s3.bucket),
-		s3.WithPresignFilePath("coffees/"+coffee.Img),
+		s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
 		s3.WithPresignExpiration(time.Hour*24),
 	)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	coffee.Img = imgURL
+	coffee.Info.Img = imgURL
 
 	// write the new coffee model to the response
 	err = app.writeJSON(w, http.StatusOK, envelope{"coffee": coffee}, nil)
@@ -304,7 +344,7 @@ func (app *application) deleteCoffeeHandler(w http.ResponseWriter, r *http.Reque
 	deleted, err := s3.DeleteFromS3(
 		s3.WithDeleteClient(app.s3.Client),
 		s3.WithDeleteBucket(app.config.s3.bucket),
-		s3.WithDeleteFilePath("coffees/"+coffee.Img),
+		s3.WithDeleteFilePath("coffees/"+coffee.Info.Img),
 	)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
@@ -312,7 +352,7 @@ func (app *application) deleteCoffeeHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	if !deleted {
-		app.logger.Info("S3 image deletion failed for " + coffee.Img)
+		app.logger.Info("S3 image deletion failed for " + coffee.Info.Img)
 	}
 
 	err = app.models.Coffees.Delete(id, user.ID)

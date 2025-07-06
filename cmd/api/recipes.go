@@ -52,14 +52,14 @@ func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Reque
 	imgURL, err := s3.PreSignURL(
 		s3.WithPresigner(app.s3.Presigner),
 		s3.WithPresignBucket(app.config.s3.bucket),
-		s3.WithPresignFilePath("coffees/"+coffee.Img),
+		s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
 		s3.WithPresignExpiration(time.Hour*24),
 	)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	coffee.Img = imgURL
+	coffee.Info.Img = imgURL
 
 	method, err := app.models.Methods.GetOne(recipe.MethodID)
 	if err != nil {
@@ -118,14 +118,14 @@ func (app *application) listRecipesHandler(w http.ResponseWriter, r *http.Reques
 		imgURL, err := s3.PreSignURL(
 			s3.WithPresigner(app.s3.Presigner),
 			s3.WithPresignBucket(app.config.s3.bucket),
-			s3.WithPresignFilePath("coffees/"+coffee.Img),
+			s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
 			s3.WithPresignExpiration(time.Hour*24),
 		)
 		if err != nil {
 			app.serverErrorResponse(w, r, err)
 			return
 		}
-		coffee.Img = imgURL
+		coffee.Info.Img = imgURL
 
 		method, err := app.models.Methods.GetOne(recipe.MethodID)
 		if err != nil {
