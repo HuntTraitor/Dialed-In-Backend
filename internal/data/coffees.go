@@ -20,9 +20,10 @@ type Coffee struct {
 
 type CoffeeInfo struct {
 	Name         string   `json:"name"`
+	Roaster      string   `json:"roaster"`
 	Region       string   `json:"region"`
 	Process      string   `json:"process"`
-	Decaff       bool     `json:"decaff"`
+	Decaf        bool     `json:"decaf"`
 	OriginType   string   `json:"origin_type"`
 	Rating       int      `json:"rating"`
 	TastingNotes []string `json:"tasting_notes"`
@@ -47,12 +48,13 @@ type CoffeeModelInterface interface {
 func ValidateCoffee(v *validator.Validator, coffee *Coffee) {
 	v.Check(coffee.Info.Name != "", "name", "must be provided")
 	v.Check(len(coffee.Info.Name) <= 500, "name", "must not be more than 500 bytes long")
+	v.Check(len(coffee.Info.Roaster) <= 500, "roaster", "must not be more than 500 bytes long")
 	v.Check(len(coffee.Info.Description) <= 1000, "description", "must not be more than 1000 bytes long")
 	v.Check(len(coffee.Info.Region) <= 100, "region", "must not be more than 100 bytes long")
 	v.Check(len(coffee.Info.Process) <= 200, "process", "must not be more than 200 bytes long")
 	v.Check(len(coffee.Info.OriginType) <= 100, "origin_type", "must not be more than 100 bytes long")
 	v.Check(coffee.Info.Rating >= 0 && coffee.Info.Rating <= 5, "rating", "must be between 0 and 5")
-	v.Check(len(coffee.Info.TastingNotes) <= 5, "tasting_notes", "must not contain more than 5 entries")
+	v.Check(len(coffee.Info.TastingNotes) <= 50, "tasting_notes", "must not contain more than 50 entries")
 	v.Check(len(coffee.Info.RoastLevel) <= 100, "roast_level", "must not be more than 100 bytes long")
 	v.Check(coffee.Info.Cost <= 1_000_000, "cost", "must not be more than 1,000,000")
 	for i, note := range coffee.Info.TastingNotes {

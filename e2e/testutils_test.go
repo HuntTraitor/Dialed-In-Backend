@@ -305,7 +305,7 @@ func createCoffee(t *testing.T, authToken string, coffee data.Coffee, image []by
 	writeField("roast_level", info.RoastLevel)
 	writeField("rating", strconv.Itoa(info.Rating))
 	writeField("cost", fmt.Sprintf("%.2f", info.Cost))
-	writeField("decaff", strconv.FormatBool(info.Decaff))
+	writeField("decaf", strconv.FormatBool(info.Decaf))
 
 	// Add tasting_notes as repeated form fields
 	for _, note := range info.TastingNotes {

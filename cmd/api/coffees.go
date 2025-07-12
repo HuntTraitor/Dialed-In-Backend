@@ -7,6 +7,7 @@ import (
 	"github.com/hunttraitor/dialed-in-backend/internal/s3"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"time"
 )
@@ -20,19 +21,19 @@ func (app *application) listCoffeesHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	for _, coffee := range coffees {
-		// pre-sign the image url
-		var imgURL string
-		imgURL, err = s3.PreSignURL(
-			s3.WithPresigner(app.s3.Presigner),
-			s3.WithPresignBucket(app.config.s3.bucket),
-			s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
-			s3.WithPresignExpiration(time.Hour*24),
-		)
-		if err != nil {
-			app.serverErrorResponse(w, r, err)
-			return
+		if coffee.Info.Img != "" {
+			imgURL, err := s3.PreSignURL(
+				s3.WithPresigner(app.s3.Presigner),
+				s3.WithPresignBucket(app.config.s3.bucket),
+				s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
+				s3.WithPresignExpiration(time.Hour*24),
+			)
+			if err != nil {
+				app.serverErrorResponse(w, r, err)
+				return
+			}
+			coffee.Info.Img = imgURL
 		}
-		coffee.Info.Img = imgURL
 	}
 
 	err = app.writeJSON(w, http.StatusOK, envelope{"coffees": coffees}, nil)
@@ -46,10 +47,11 @@ func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Reque
 
 	var input struct {
 		Name         string   `form:"name"`
+		Roaster      string   `form:"roaster"`
 		Region       string   `form:"region"`
 		Process      string   `form:"process"`
 		Description  string   `form:"description"`
-		Decaff       bool     `form:"decaff"`
+		Decaf        bool     `form:"decaf"`
 		OriginType   string   `form:"origin_type"`
 		TastingNotes []string `form:"tasting_notes"`
 		Rating       int      `form:"rating"`
@@ -69,21 +71,27 @@ func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Reque
 	v := validator.New()
 
 	// extract image from form
-	img, handler, err := r.FormFile("img")
-	if err != nil {
-		v.AddError("img", "must be provided")
-	} else {
-		defer img.Close()
+	var (
+		img     multipart.File
+		handler *multipart.FileHeader
+	)
+	img, handler, err = r.FormFile("img")
+
+	// An error other than missing file occurred
+	if err != nil && !errors.Is(err, http.ErrMissingFile) {
+		app.badRequestResponse(w, r, err)
+		return
 	}
 
 	coffee := &data.Coffee{
 		UserID: int(user.ID),
 		Info: data.CoffeeInfo{
 			Name:         input.Name,
+			Roaster:      input.Roaster,
 			Region:       input.Region,
 			Process:      input.Process,
 			Description:  input.Description,
-			Decaff:       input.Decaff,
+			Decaf:        input.Decaf,
 			OriginType:   input.OriginType,
 			TastingNotes: input.TastingNotes,
 			Rating:       input.Rating,
@@ -98,46 +106,50 @@ func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// convert image to byte buffer
-	var buf bytes.Buffer
-	_, err = io.Copy(&buf, img)
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-		return
-	}
+	if img != nil {
+		defer img.Close()
 
-	// upload byte buffer to s3
-	fileName, err := s3.UploadToS3(
-		s3.WithClient(app.s3.Client),
-		s3.WithFile(buf),
-		s3.WithFileType(handler.Header),
-		s3.WithBucket(app.config.s3.bucket),
-		s3.WithFilePath("coffees/"))
+		// convert image to byte buffer
+		var buf bytes.Buffer
+		_, err = io.Copy(&buf, img)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
 
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-		return
+		// upload byte buffer to s3
+		fileName, err := s3.UploadToS3(
+			s3.WithClient(app.s3.Client),
+			s3.WithFile(buf),
+			s3.WithFileType(handler.Header),
+			s3.WithBucket(app.config.s3.bucket),
+			s3.WithFilePath("coffees/"))
+
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+		coffee.Info.Img = fileName
+
+		// Pre-sign the URL to send back to the client
+		imgURL, err := s3.PreSignURL(
+			s3.WithPresigner(app.s3.Presigner),
+			s3.WithPresignBucket(app.config.s3.bucket),
+			s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
+			s3.WithPresignExpiration(time.Hour*24),
+		)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+		coffee.Info.Img = imgURL
 	}
-	coffee.Info.Img = fileName
 
 	err = app.models.Coffees.Insert(coffee)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-
-	// Pre-sign the URL to send back to the client
-	imgURL, err := s3.PreSignURL(
-		s3.WithPresigner(app.s3.Presigner),
-		s3.WithPresignBucket(app.config.s3.bucket),
-		s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
-		s3.WithPresignExpiration(time.Hour*24),
-	)
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-		return
-	}
-	coffee.Info.Img = imgURL
 
 	err = app.writeJSON(w, http.StatusCreated, envelope{"coffee": coffee}, nil)
 	if err != nil {
@@ -164,17 +176,19 @@ func (app *application) getCoffeeHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	// pre-sign the image url
-	imgURL, err := s3.PreSignURL(
-		s3.WithPresigner(app.s3.Presigner),
-		s3.WithPresignBucket(app.config.s3.bucket),
-		s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
-		s3.WithPresignExpiration(time.Hour*24),
-	)
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-		return
+	if coffee.Info.Img != "" {
+		imgURL, err := s3.PreSignURL(
+			s3.WithPresigner(app.s3.Presigner),
+			s3.WithPresignBucket(app.config.s3.bucket),
+			s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
+			s3.WithPresignExpiration(time.Hour*24),
+		)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+		coffee.Info.Img = imgURL
 	}
-	coffee.Info.Img = imgURL
 
 	err = app.writeJSON(w, http.StatusOK, envelope{"coffee": coffee}, nil)
 	if err != nil {
@@ -204,10 +218,11 @@ func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Reque
 
 	var input struct {
 		Name         *string   `form:"name"`
+		Roaster      *string   `form:"roaster"`
 		Region       *string   `form:"region"`
 		Process      *string   `form:"process"`
 		Description  *string   `form:"description"`
-		Decaff       *bool     `form:"decaff"`
+		Decaf        *bool     `form:"decaf"`
 		OriginType   *string   `form:"origin_type"`
 		TastingNotes *[]string `form:"tasting_notes"`
 		Rating       *int      `form:"rating"`
@@ -225,6 +240,9 @@ func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Reque
 	if input.Name != nil {
 		coffee.Info.Name = *input.Name
 	}
+	if input.Roaster != nil {
+		coffee.Info.Roaster = *input.Roaster
+	}
 	if input.Region != nil {
 		coffee.Info.Region = *input.Region
 	}
@@ -234,8 +252,8 @@ func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Reque
 	if input.Description != nil {
 		coffee.Info.Description = *input.Description
 	}
-	if input.Decaff != nil {
-		coffee.Info.Decaff = *input.Decaff
+	if input.Decaf != nil {
+		coffee.Info.Decaf = *input.Decaf
 	}
 	if input.OriginType != nil {
 		coffee.Info.OriginType = *input.OriginType
@@ -255,10 +273,14 @@ func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Reque
 
 	// check if an image is uploaded and if so replace the image
 	imgFile, header, err := r.FormFile("img")
+	if err != nil && !errors.Is(err, http.ErrMissingFile) {
+		// Real error, not just missing file
+		app.badRequestResponse(w, r, err)
+		return
+	}
 	if err == nil {
 		defer imgFile.Close()
 
-		// convert inputted image to byte buffer
 		var buf bytes.Buffer
 		_, err = io.Copy(&buf, imgFile)
 		if err != nil {
@@ -266,7 +288,6 @@ func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Reque
 			return
 		}
 
-		// upload new byte buffer to s3
 		var fileName string
 		fileName, err = s3.UploadToS3(
 			s3.WithClient(app.s3.Client),
@@ -303,17 +324,19 @@ func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	// PreSign the URL to send back to the client
-	imgURL, err := s3.PreSignURL(
-		s3.WithPresigner(app.s3.Presigner),
-		s3.WithPresignBucket(app.config.s3.bucket),
-		s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
-		s3.WithPresignExpiration(time.Hour*24),
-	)
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-		return
+	if coffee.Info.Img != "" {
+		imgURL, err := s3.PreSignURL(
+			s3.WithPresigner(app.s3.Presigner),
+			s3.WithPresignBucket(app.config.s3.bucket),
+			s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
+			s3.WithPresignExpiration(time.Hour*24),
+		)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+		coffee.Info.Img = imgURL
 	}
-	coffee.Info.Img = imgURL
 
 	// write the new coffee model to the response
 	err = app.writeJSON(w, http.StatusOK, envelope{"coffee": coffee}, nil)
