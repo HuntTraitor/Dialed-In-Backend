@@ -109,7 +109,6 @@ func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Reque
 	if img != nil {
 		defer img.Close()
 
-		// convert image to byte buffer
 		var buf bytes.Buffer
 		_, err = io.Copy(&buf, img)
 		if err != nil {
@@ -117,21 +116,27 @@ func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Reque
 			return
 		}
 
-		// upload byte buffer to s3
 		fileName, err := s3.UploadToS3(
 			s3.WithClient(app.s3.Client),
 			s3.WithFile(buf),
 			s3.WithFileType(handler.Header),
 			s3.WithBucket(app.config.s3.bucket),
 			s3.WithFilePath("coffees/"))
-
 		if err != nil {
 			app.serverErrorResponse(w, r, err)
 			return
 		}
-		coffee.Info.Img = fileName
 
-		// Pre-sign the URL to send back to the client
+		coffee.Info.Img = fileName
+	}
+
+	err = app.models.Coffees.Insert(coffee)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	if coffee.Info.Img != "" {
 		imgURL, err := s3.PreSignURL(
 			s3.WithPresigner(app.s3.Presigner),
 			s3.WithPresignBucket(app.config.s3.bucket),
@@ -143,12 +148,6 @@ func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Reque
 			return
 		}
 		coffee.Info.Img = imgURL
-	}
-
-	err = app.models.Coffees.Insert(coffee)
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-		return
 	}
 
 	err = app.writeJSON(w, http.StatusCreated, envelope{"coffee": coffee}, nil)
