@@ -20,17 +20,17 @@ type Coffee struct {
 
 type CoffeeInfo struct {
 	Name         string   `json:"name"`
-	Roaster      string   `json:"roaster"`
-	Region       string   `json:"region"`
-	Process      string   `json:"process"`
+	Roaster      string   `json:"roaster,omitempty"`
+	Region       string   `json:"region,omitempty"`
+	Process      string   `json:"process,omitempty"`
 	Decaf        bool     `json:"decaf"`
-	OriginType   string   `json:"origin_type"`
-	Rating       int      `json:"rating"`
-	TastingNotes []string `json:"tasting_notes"`
-	RoastLevel   string   `json:"roast_level"`
-	Cost         float32  `json:"cost"`
-	Img          string   `json:"img"`
-	Description  string   `json:"description"`
+	OriginType   string   `json:"origin_type,omitempty"`
+	Rating       int      `json:"rating,omitempty"`
+	TastingNotes []string `json:"tasting_notes,omitempty"`
+	RoastLevel   string   `json:"roast_level,omitempty"`
+	Cost         float32  `json:"cost,omitempty"`
+	Img          string   `json:"img,omitempty"`
+	Description  string   `json:"description,omitempty"`
 }
 
 type CoffeeModel struct {
