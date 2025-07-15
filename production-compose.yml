@@ -22,8 +22,6 @@ services:
     expose:
       - "3000"
     command: ["/app/bin/api", "-metrics=true", "-env=production"]
-    volumes:
-      - .:/app
     depends_on:
       - db
 
