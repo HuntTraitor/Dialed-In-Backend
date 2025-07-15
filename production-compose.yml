@@ -11,6 +11,9 @@ services:
       - TEST_DATABASE_URL=${TEST_DATABASE_URL}
       - SMTP_USERNAME=${SMTP_USERNAME}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - S3_BUCKET=${S3_BUCKET}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
     build:
       context: .
       dockerfile: Dockerfile
