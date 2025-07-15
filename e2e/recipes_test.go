@@ -22,13 +22,15 @@ func TestCreateRecipe(t *testing.T) {
 
 	// create a new coffee to attach the recipe to
 	insertedCoffee := data.Coffee{
-		Name:        "Test Coffee",
-		Region:      "Test Region",
-		Process:     "Test Process",
-		Description: "Test Description",
-		Img:         "Test Image",
+		Info: data.CoffeeInfo{
+			Name:        "Test Coffee",
+			Region:      "Test Region",
+			Process:     "Test Process",
+			Description: "Test Description",
+			Img:         "Test Image",
+		},
 	}
-	createCoffee(t, token, insertedCoffee, []byte(insertedCoffee.Img))
+	createCoffee(t, token, insertedCoffee, []byte(insertedCoffee.Info.Img))
 
 	correctPayload := map[string]any{
 		"coffee_id": 1,
@@ -73,7 +75,9 @@ func TestCreateRecipe(t *testing.T) {
 					"name": "Pour Over",
 				},
 				"coffee": map[string]any{
-					"name": "Test Coffee",
+					"info": map[string]any{
+						"name": "Test Coffee",
+					},
 				},
 				"info": map[string]any{
 					"name":     "Test Name",
@@ -294,11 +298,13 @@ func TestCreateRecipe(t *testing.T) {
 			assert.Equal(t, tt.expectedStatusCode, statusCode)
 			if tt.expectedResponse != nil {
 				recipe := body["recipe"].(map[string]any)
+				coffeeInfo := recipe["coffee"].(map[string]any)["info"].(map[string]any)
+				expectedInfo := tt.expectedResponse["coffee"].(map[string]any)["info"].(map[string]any)
 				assert.Equal(t, tt.expectedResponse["name"], recipe["name"])
 				assert.Equal(t, tt.expectedResponse["phases"], recipe["phases"])
 				assert.Equal(t, tt.expectedResponse["ml_out"], recipe["ml_out"])
 				assert.Equal(t, tt.expectedResponse["grams_in"], recipe["grams_in"])
-				assert.Equal(t, tt.expectedResponse["coffee"].(map[string]any)["name"], recipe["coffee"].(map[string]any)["name"])
+				assert.Equal(t, expectedInfo["name"], coffeeInfo["name"])
 				assert.NotEmpty(t, recipe["coffee"].(map[string]any)["id"])
 				assert.Equal(t, tt.expectedResponse["method"].(map[string]any)["name"], recipe["method"].(map[string]any)["name"])
 				assert.NotEmpty(t, recipe["method"].(map[string]any)["id"])
@@ -333,13 +339,15 @@ func TestListRecipes(t *testing.T) {
 
 	// create a new coffee to attach the recipe to
 	insertedCoffee := data.Coffee{
-		Name:        "Test Coffee",
-		Region:      "Test Region",
-		Process:     "Test Process",
-		Description: "Test Description",
-		Img:         "Test Image",
+		Info: data.CoffeeInfo{
+			Name:        "Test Coffee",
+			Region:      "Test Region",
+			Process:     "Test Process",
+			Description: "Test Description",
+			Img:         "Test Image",
+		},
 	}
-	createCoffee(t, token, insertedCoffee, []byte(insertedCoffee.Img))
+	createCoffee(t, token, insertedCoffee, []byte(insertedCoffee.Info.Img))
 
 	insertedRecipe := data.Recipe{
 		CoffeeID: 1,

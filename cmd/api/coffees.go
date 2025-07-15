@@ -96,7 +96,7 @@ func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Reque
 			TastingNotes: input.TastingNotes,
 			Rating:       input.Rating,
 			RoastLevel:   input.RoastLevel,
-			Cost:         float32(input.Cost),
+			Cost:         float64(input.Cost),
 			// Img will be set from `img` or base64/image path
 		},
 	}
@@ -226,7 +226,7 @@ func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Reque
 		TastingNotes *[]string `form:"tasting_notes"`
 		Rating       *int      `form:"rating"`
 		RoastLevel   *string   `form:"roast_level"`
-		Cost         *float32  `form:"cost"`
+		Cost         *float64  `form:"cost"`
 		Image        []byte    `form:"image"`
 	}
 

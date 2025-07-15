@@ -298,6 +298,7 @@ func createCoffee(t *testing.T, authToken string, coffee data.Coffee, image []by
 	}
 
 	writeField("name", info.Name)
+	writeField("roaster", info.Roaster)
 	writeField("region", info.Region)
 	writeField("process", info.Process)
 	writeField("description", info.Description)
