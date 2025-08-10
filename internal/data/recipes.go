@@ -1,6 +1,7 @@
 package data
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -12,58 +13,114 @@ import (
 )
 
 type Recipe struct {
-	ID        int64      `json:"id,omitempty"`
-	UserID    int64      `json:"user_id,omitempty"`
-	MethodID  int64      `json:"method_id"`
-	CoffeeID  int64      `json:"coffee_id"`
-	Info      RecipeInfo `json:"info"`
-	CreatedAt string     `json:"created_at,omitempty"`
-	Version   int        `json:"version,omitempty"`
+	ID        int64           `json:"id,omitempty"`
+	UserID    int64           `json:"user_id,omitempty"`
+	MethodID  int64           `json:"method_id"`
+	CoffeeID  int64           `json:"coffee_id"`
+	Info      json.RawMessage `json:"info"`
+	CreatedAt string          `json:"created_at,omitempty"`
+	Version   int             `json:"version,omitempty"`
 }
 
 type FullRecipe struct {
-	ID        int64      `json:"id"`
-	UserID    int64      `json:"user_id"`
-	Method    Method     `json:"method"`
-	Coffee    Coffee     `json:"coffee"`
-	Info      RecipeInfo `json:"info"`
-	CreatedAt string     `json:"created_at"`
-	Version   int        `json:"version"`
+	ID        int64           `json:"id"`
+	UserID    int64           `json:"user_id"`
+	Method    Method          `json:"method"`
+	Coffee    Coffee          `json:"coffee"`
+	Info      json.RawMessage `json:"info"`
+	CreatedAt string          `json:"created_at"`
+	Version   int             `json:"version"`
 }
 
-type RecipeInfo struct {
-	Name   string  `json:"name"`
-	GramIn int     `json:"grams_in"`
-	MlOut  int     `json:"ml_out"`
-	Phases []Phase `json:"phases"`
+type SwitchRecipeInfo struct {
+	Name   string        `json:"name"`
+	GramIn int           `json:"grams_in"`
+	MlOut  int           `json:"ml_out"`
+	Phases []SwitchPhase `json:"phases"`
 }
 
-type Phase struct {
+type SwitchPhase struct {
 	Open   *bool `json:"open"`
 	Time   int   `json:"time"`
 	Amount int   `json:"amount"`
+}
+
+type V60RecipeInfo struct {
+	Name   string     `json:"name"`
+	GramIn int        `json:"grams_in"`
+	MlOut  int        `json:"ml_out"`
+	Phases []V60Phase `json:"phases"`
+}
+
+type V60Phase struct {
+	Time   int `json:"time"`
+	Amount int `json:"amount"`
 }
 
 type RecipeModel struct {
 	DB *sql.DB
 }
 
-// ValidateRecipe validates a specific recipe is correct
-func ValidateRecipe(v *validator.Validator, recipe *Recipe) {
-	v.Check(recipe.Info.Name != "", "name", "must be provided")
-	v.Check(len(recipe.Info.Name) <= 100, "name", "must not be more than 100 bytes")
-	v.Check(recipe.Info.MlOut > 0, "ml_out", "must be greater than zero")
-	v.Check(recipe.Info.GramIn > 0, "grams_in", "must be greater than zero")
-	v.Check(recipe.Info.MlOut < 1000, "ml_out", "must be less than a thousand")
-	v.Check(recipe.Info.GramIn < 10000, "grams_in", "must be less than ten thousand")
-	for _, phase := range recipe.Info.Phases {
-		ValidatePhase(v, &phase)
+// decodeInfoStrict strictly (allowing no extra values) decodes a json message into type T
+func decodeInfoStrict[T any](v *validator.Validator, raw json.RawMessage) (T, bool) {
+	var typed T
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&typed); err != nil {
+		v.AddError("info", fmt.Sprintf("invalid format: %v", err))
+		return typed, false
+	}
+	return typed, true
+}
+
+// ValidateRecipe validates a specific Recipe is correct based on the Method
+func ValidateRecipe(v *validator.Validator, recipe *Recipe, method *Method) {
+	switch method.ID {
+	case 1:
+		info, ok := decodeInfoStrict[V60RecipeInfo](v, recipe.Info)
+		if !ok {
+			return
+		}
+		v.Check(info.Name != "", "name", "must be provided")
+		v.Check(len(info.Name) <= 100, "name", "must not be more than 100 bytes")
+		v.Check(info.MlOut > 0, "ml_out", "must be greater than zero")
+		v.Check(info.GramIn > 0, "grams_in", "must be greater than zero")
+		v.Check(info.MlOut < 1000, "ml_out", "must be less than a thousand")
+		v.Check(info.GramIn < 10000, "grams_in", "must be less than ten thousand")
+		for _, phase := range info.Phases {
+			ValidateV60Phase(v, &phase)
+		}
+
+	case 2:
+		fmt.Println(recipe)
+		info, ok := decodeInfoStrict[SwitchRecipeInfo](v, recipe.Info)
+		if !ok {
+			return
+		}
+		v.Check(info.Name != "", "name", "must be provided")
+		v.Check(len(info.Name) <= 100, "name", "must not be more than 100 bytes")
+		v.Check(info.MlOut > 0, "ml_out", "must be greater than zero")
+		v.Check(info.GramIn > 0, "grams_in", "must be greater than zero")
+		v.Check(info.MlOut < 1000, "ml_out", "must be less than a thousand")
+		v.Check(info.GramIn < 10000, "grams_in", "must be less than ten thousand")
+		for _, phase := range info.Phases {
+			ValidateSwitchPhase(v, &phase)
+		}
+
+	default:
+		v.AddError("info", "is in an known format")
 	}
 }
 
-// ValidatePhase validates a phase is the correct format
-func ValidatePhase(v *validator.Validator, phase *Phase) {
+// ValidateSwitchPhase validates a switch phase is the correct format
+func ValidateSwitchPhase(v *validator.Validator, phase *SwitchPhase) {
 	v.Check(phase.Open != nil, "open", "must be provided")
+	v.Check(phase.Time > 0, "time", "must be greater than zero")
+	v.Check(phase.Amount >= 0, "amount", "must be greater than or equal to zero")
+}
+
+// ValidateV60Phase validates a v60 phase is the correct format
+func ValidateV60Phase(v *validator.Validator, phase *V60Phase) {
 	v.Check(phase.Time > 0, "time", "must be greater than zero")
 	v.Check(phase.Amount >= 0, "amount", "must be greater than or equal to zero")
 }

@@ -26,7 +26,7 @@ func TestGetAllMethods(t *testing.T) {
 			expectedMethods: []data.Method{
 				{
 					ID:        1,
-					Name:      "Pour Over",
+					Name:      "V60",
 					CreatedAt: "2025-01-25 00:28:23 +00:00",
 				},
 				{
@@ -60,7 +60,7 @@ func TestGetOneMethod(t *testing.T) {
 
 	mockMethod := data.Method{
 		ID:   1,
-		Name: "Pour Over",
+		Name: "V60",
 	}
 
 	tests := []struct {

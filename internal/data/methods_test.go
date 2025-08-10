@@ -15,7 +15,7 @@ func TestGetAll(t *testing.T) {
 			name: "Successfully gets list of methods",
 			expectedResult: []Method{
 				{
-					Name: "Pour Over",
+					Name: "V60",
 				},
 				{
 					Name: "Hario Switch",

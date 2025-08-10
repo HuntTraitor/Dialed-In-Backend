@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"github.com/hunttraitor/dialed-in-backend/internal/s3"
@@ -15,7 +16,7 @@ func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Reque
 	var input struct {
 		MethodId int64           `json:"method_id"`
 		CoffeeId int64           `json:"coffee_id"`
-		Info     data.RecipeInfo `json:"info"`
+		Info     json.RawMessage `json:"info"`
 	}
 
 	err := app.readJSON(w, r, &input)
@@ -31,8 +32,19 @@ func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Reque
 		Info:     input.Info,
 	}
 
+	method, err := app.models.Methods.GetOne(recipe.MethodID)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
 	v := validator.New()
-	if data.ValidateRecipe(v, recipe); !v.Valid() {
+	if data.ValidateRecipe(v, recipe, method); !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
@@ -60,17 +72,6 @@ func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	coffee.Info.Img = imgURL
-
-	method, err := app.models.Methods.GetOne(recipe.MethodID)
-	if err != nil {
-		switch {
-		case errors.Is(err, data.ErrRecordNotFound):
-			app.notFoundResponse(w, r)
-		default:
-			app.serverErrorResponse(w, r, err)
-		}
-		return
-	}
 
 	err = app.models.Recipes.Insert(recipe)
 	if err != nil {
