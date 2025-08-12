@@ -103,6 +103,7 @@ func ValidateRecipe(v *validator.Validator, recipe *Recipe, method *Method) {
 		v.Check(info.GramIn > 0, "grams_in", "must be greater than zero")
 		v.Check(info.MlOut < 1000, "ml_out", "must be less than a thousand")
 		v.Check(info.GramIn < 10000, "grams_in", "must be less than ten thousand")
+		v.Check(len(info.Phases) > 0, "phases", "must be greater than zero")
 		for _, phase := range info.Phases {
 			ValidateSwitchPhase(v, &phase)
 		}
