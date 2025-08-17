@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"net/url"
@@ -219,4 +220,43 @@ func (m RecipeModel) GetAllForUser(userID int64, params url.Values) ([]*Recipe, 
 		return nil, err
 	}
 	return recipes, nil
+}
+
+func (m RecipeModel) Update(recipe *Recipe) error {
+	query := `
+		UPDATE recipes
+		SET method_id = $1, 
+		    coffee_id = $2, 
+		    info = $3,
+		    version = version + 1
+		WHERE id = $4 and version = $5
+		returning version
+	`
+
+	infoJSON, err := json.Marshal(recipe.Info)
+	if err != nil {
+		return err
+	}
+
+	args := []any{
+		recipe.MethodID,
+		recipe.CoffeeID,
+		infoJSON,
+		recipe.ID,
+		recipe.Version,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err = m.DB.QueryRowContext(ctx, query, args...).Scan(&recipe.Version)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrEditConflict
+		default:
+			return err
+		}
+	}
+	return nil
 }
