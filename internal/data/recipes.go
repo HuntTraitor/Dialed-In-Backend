@@ -130,6 +130,8 @@ func ValidateV60Phase(v *validator.Validator, phase *V60Phase) {
 type RecipeModelInterface interface {
 	Insert(recipe *Recipe) error
 	GetAllForUser(userID int64, params url.Values) ([]*Recipe, error)
+	Get(id int64, userId int64) (*Recipe, error)
+	Update(recipe *Recipe) error
 }
 
 func (m RecipeModel) Insert(recipe *Recipe) error {
@@ -259,4 +261,41 @@ func (m RecipeModel) Update(recipe *Recipe) error {
 		}
 	}
 	return nil
+}
+
+func (m RecipeModel) Get(id int64, userId int64) (*Recipe, error) {
+	query := `SELECT * FROM recipes
+						WHERE id = $1 and user_id = $2
+						`
+
+	args := []any{id, userId}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	rows, err := m.DB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	var recipe Recipe
+	var infoBytes []byte
+
+	err = rows.Scan(
+		&recipe.ID,
+		&recipe.UserID,
+		&recipe.CoffeeID,
+		&recipe.MethodID,
+		&infoBytes,
+		&recipe.Version,
+		&recipe.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(infoBytes, &recipe.Info)
+	if err != nil {
+		return nil, err
+	}
+	return &recipe, nil
 }
