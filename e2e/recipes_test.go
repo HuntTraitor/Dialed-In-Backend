@@ -354,9 +354,9 @@ func TestListRecipes(t *testing.T) {
 		GramIn: 20,
 		MlOut:  320,
 		Phases: []data.SwitchPhase{
-			{Open: boolPtr(true), Time: 45, Amount: 160},
-			{Open: boolPtr(false), Time: 75, Amount: 320},
-			{Open: boolPtr(true), Time: 60, Amount: 0},
+			{Open: ptr(true), Time: ptr(45), Amount: ptr(160)},
+			{Open: ptr(false), Time: ptr(75), Amount: ptr(320)},
+			{Open: ptr(true), Time: ptr(60), Amount: ptr(0)},
 		},
 	}
 

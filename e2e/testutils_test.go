@@ -223,10 +223,9 @@ func waitFor(t *testing.T, condition func() bool) {
 	}
 }
 
-// boolPtr takes a boolean and returns to pointer to that boolean
-// Mainly used for initialing data.Phase
-func boolPtr(b bool) *bool {
-	return &b
+// ptr takes a type and returns to pointer to that type
+func ptr[T any](v T) *T {
+	return &v
 }
 
 // extractToken takes an email body from mailhog and returns the token inside of that body
