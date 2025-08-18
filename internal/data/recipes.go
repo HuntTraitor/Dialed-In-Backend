@@ -274,24 +274,21 @@ func (m RecipeModel) Update(recipe *Recipe) error {
 }
 
 func (m RecipeModel) Get(id int64, userId int64) (*Recipe, error) {
+	if id < 1 || userId < 1 {
+		return nil, ErrRecordNotFound
+	}
+
 	query := `SELECT * FROM recipes
 						WHERE id = $1 and user_id = $2
 						`
 
-	args := []any{id, userId}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-
-	rows, err := m.DB.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
 
 	var recipe Recipe
 	var infoBytes []byte
 
-	err = rows.Scan(
+	err := m.DB.QueryRowContext(ctx, query, id, userId).Scan(
 		&recipe.ID,
 		&recipe.UserID,
 		&recipe.CoffeeID,
@@ -301,8 +298,12 @@ func (m RecipeModel) Get(id int64, userId int64) (*Recipe, error) {
 		&recipe.CreatedAt,
 	)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrRecordNotFound
+		}
 		return nil, err
 	}
+
 	err = json.Unmarshal(infoBytes, &recipe.Info)
 	if err != nil {
 		return nil, err
