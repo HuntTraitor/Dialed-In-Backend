@@ -14,3 +14,11 @@ func (m MockRecipeModel) Insert(recipe *data.Recipe) error {
 func (m MockRecipeModel) GetAllForUser(userID int64, params url.Values) ([]*data.Recipe, error) {
 	return []*data.Recipe{}, nil
 }
+
+func (m MockRecipeModel) Update(recipe *data.Recipe) error {
+	return nil
+}
+
+func (m MockRecipeModel) Get(id int64, userId int64) (*data.Recipe, error) {
+	return nil, nil
+}
