@@ -42,8 +42,8 @@ type SwitchRecipeInfo struct {
 
 type SwitchPhase struct {
 	Open   *bool `json:"open"`
-	Time   int   `json:"time"`
-	Amount int   `json:"amount"`
+	Time   *int  `json:"time"`
+	Amount *int  `json:"amount"`
 }
 
 type V60RecipeInfo struct {
@@ -54,8 +54,8 @@ type V60RecipeInfo struct {
 }
 
 type V60Phase struct {
-	Time   int `json:"time"`
-	Amount int `json:"amount"`
+	Time   *int `json:"time"`
+	Amount *int `json:"amount"`
 }
 
 type RecipeModel struct {
@@ -75,8 +75,8 @@ func decodeInfoStrict[T any](v *validator.Validator, raw json.RawMessage) (T, bo
 }
 
 // ValidateRecipe validates a specific Recipe is correct based on the Method
-func ValidateRecipe(v *validator.Validator, recipe *Recipe, method *Method) {
-	switch method.ID {
+func ValidateRecipe(v *validator.Validator, recipe *Recipe) {
+	switch recipe.MethodID {
 	case 1:
 		info, ok := decodeInfoStrict[V60RecipeInfo](v, recipe.Info)
 		if !ok {
@@ -117,14 +117,24 @@ func ValidateRecipe(v *validator.Validator, recipe *Recipe, method *Method) {
 // ValidateSwitchPhase validates a switch phase is the correct format
 func ValidateSwitchPhase(v *validator.Validator, phase *SwitchPhase) {
 	v.Check(phase.Open != nil, "open", "must be provided")
-	v.Check(phase.Time > 0, "time", "must be greater than zero")
-	v.Check(phase.Amount >= 0, "amount", "must be greater than or equal to zero")
+	v.Check(phase.Time != nil, "time", "must be provided")
+	v.Check(phase.Amount != nil, "amount", "must be provided")
+	if phase.Time != nil {
+		v.Check(*phase.Time > 0, "time", "must be greater than zero")
+	}
+	if phase.Amount != nil {
+		v.Check(*phase.Amount >= 0, "amount", "must be greater than or equal to zero")
+	}
 }
 
 // ValidateV60Phase validates a v60 phase is the correct format
 func ValidateV60Phase(v *validator.Validator, phase *V60Phase) {
-	v.Check(phase.Time > 0, "time", "must be greater than zero")
-	v.Check(phase.Amount >= 0, "amount", "must be greater than or equal to zero")
+	if phase.Time != nil {
+		v.Check(*phase.Time > 0, "time", "must be greater than zero")
+	}
+	if phase.Amount != nil {
+		v.Check(*phase.Amount >= 0, "amount", "must be greater than or equal to zero")
+	}
 }
 
 type RecipeModelInterface interface {
