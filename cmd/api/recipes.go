@@ -185,8 +185,6 @@ func (app *application) updateRecipeHandler(w http.ResponseWriter, r *http.Reque
 		Info     *json.RawMessage `json:"info"`
 	}
 
-	fmt.Println("here?")
-
 	err = app.readJSON(w, r, &input)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
@@ -205,6 +203,18 @@ func (app *application) updateRecipeHandler(w http.ResponseWriter, r *http.Reque
 		recipe.Info = *input.Info
 	}
 
+	method, err := app.models.Methods.GetOne(recipe.MethodID)
+	if err != nil {
+		app.unknownMethodResponse(w, r)
+		return
+	}
+
+	coffee, err := app.models.Coffees.GetOne(recipe.CoffeeID, recipe.UserID)
+	if err != nil {
+		app.unknownCoffeeResponse(w, r)
+		return
+	}
+
 	v := validator.New()
 	if data.ValidateRecipe(v, recipe); !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
@@ -219,18 +229,6 @@ func (app *application) updateRecipeHandler(w http.ResponseWriter, r *http.Reque
 		default:
 			app.serverErrorResponse(w, r, err)
 		}
-		return
-	}
-
-	method, err := app.models.Methods.GetOne(recipe.MethodID)
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-		return
-	}
-
-	coffee, err := app.models.Coffees.GetOne(recipe.CoffeeID, recipe.ID)
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
 		return
 	}
 

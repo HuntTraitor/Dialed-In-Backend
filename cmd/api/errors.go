@@ -85,7 +85,12 @@ func (app *application) inactiveAccountResponse(w http.ResponseWriter, r *http.R
 	app.errorResponse(w, r, http.StatusUnauthorized, message)
 }
 
-//func (app *application) notVerifiedResponse(w http.ResponseWriter, r *http.Request) {
-//	message := "your user account must be verified to login, please verify your account by checking your email"
-//	app.errorResponse(w, r, http.StatusUnauthorized, message)
-//}
+func (app *application) unknownCoffeeResponse(w http.ResponseWriter, r *http.Request) {
+	message := "the requested coffee could not be found"
+	app.errorResponse(w, r, http.StatusNotFound, message)
+}
+
+func (app *application) unknownMethodResponse(w http.ResponseWriter, r *http.Request) {
+	message := "the requested method could not be found"
+	app.errorResponse(w, r, http.StatusNotImplemented, message)
+}
