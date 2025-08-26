@@ -142,6 +142,7 @@ type RecipeModelInterface interface {
 	GetAllForUser(userID int64, params url.Values) ([]*Recipe, error)
 	Get(id int64, userId int64) (*Recipe, error)
 	Update(recipe *Recipe) error
+	Delete(id int64, userID int64) error
 }
 
 func (m RecipeModel) Insert(recipe *Recipe) error {
@@ -309,4 +310,30 @@ func (m RecipeModel) Get(id int64, userId int64) (*Recipe, error) {
 		return nil, err
 	}
 	return &recipe, nil
+}
+
+func (m RecipeModel) Delete(id int64, userID int64) error {
+	if id < 1 || userID < 1 {
+		return ErrRecordNotFound
+	}
+
+	query := `DELETE FROM recipes WHERE id = $1 AND user_id = $2`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	result, err := m.DB.ExecContext(ctx, query, id, userID)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return ErrRecordNotFound
+	}
+	return nil
 }

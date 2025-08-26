@@ -22,3 +22,7 @@ func (m MockRecipeModel) Update(recipe *data.Recipe) error {
 func (m MockRecipeModel) Get(id int64, userId int64) (*data.Recipe, error) {
 	return nil, nil
 }
+
+func (m MockRecipeModel) Delete(id int64, userID int64) error {
+	return nil
+}
