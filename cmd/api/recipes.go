@@ -221,6 +221,21 @@ func (app *application) updateRecipeHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	if coffee.Info.Img != "" {
+		// pre-sign the image url
+		imgURL, err := s3.PreSignURL(
+			s3.WithPresigner(app.s3.Presigner),
+			s3.WithPresignBucket(app.config.s3.bucket),
+			s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
+			s3.WithPresignExpiration(time.Hour*24),
+		)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+		coffee.Info.Img = imgURL
+	}
+
 	err = app.models.Recipes.Update(recipe)
 	if err != nil {
 		switch {
