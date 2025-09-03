@@ -163,7 +163,7 @@ func (app *application) updateUserPasswordHandler(w http.ResponseWriter, r *http
 
 	v := validator.New()
 	data.ValidatePasswordPlainText(v, input.Password)
-	data.ValidateTokenPlainText(v, input.TokenPlainText)
+	data.ValidatePasswordResetTokenPlainText(v, input.TokenPlainText)
 	if !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return

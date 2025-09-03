@@ -6,6 +6,8 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base32"
+	"encoding/binary"
+	"fmt"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"time"
 )
@@ -41,27 +43,43 @@ func generateToken(userID int64, ttl time.Duration, scope string) (*Token, error
 		Expiry: time.Now().UTC().Add(ttl),
 		Scope:  scope,
 	}
-	randomBytes := make([]byte, 16)
 
-	// fill the bytes with random c strings
-	_, err := rand.Read(randomBytes)
-	if err != nil {
-		return nil, err
+	if scope == ScopePasswordReset {
+		// Generate a 6-digit numeric code for password reset
+		randomBytes := make([]byte, 4)
+		_, err := rand.Read(randomBytes)
+		if err != nil {
+			return nil, err
+		}
+		// Convert to number and ensure it's 6 digits
+		num := binary.BigEndian.Uint32(randomBytes)
+		code := (num % 900000) + 100000
+		token.Plaintext = fmt.Sprintf("%06d", code)
+	} else {
+		// Use the existing random bytes method for other token types
+		randomBytes := make([]byte, 16)
+		_, err := rand.Read(randomBytes)
+		if err != nil {
+			return nil, err
+		}
+		token.Plaintext = base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(randomBytes)
 	}
 
-	// encode byte slice to a base32 string we send to the user in order to activate
-	token.Plaintext = base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(randomBytes)
-
-	// create a sha256 hash of the plaintext field to store in database
+	// Create a sha256 hash of the plaintext field to store in database
 	hash := sha256.Sum256([]byte(token.Plaintext))
 	token.Hash = hash[:]
-	return token, nil
 
+	return token, nil
 }
 
 func ValidateTokenPlainText(v *validator.Validator, tokenPlainText string) {
 	v.Check(tokenPlainText != "", "token", "must be provided")
 	v.Check(len(tokenPlainText) == 26, "token", "must be 26 bytes long")
+}
+
+func ValidatePasswordResetTokenPlainText(v *validator.Validator, tokenPlainText string) {
+	v.Check(tokenPlainText != "", "token", "must be provided")
+	v.Check(len(tokenPlainText) == 6, "token", "must be 6 bytes long")
 }
 
 // New generates a new token based on a userID

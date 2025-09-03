@@ -298,7 +298,7 @@ func TestUpdateUserPasswordHandler(t *testing.T) {
 	}{
 		{
 			name:               "Successfully resets password",
-			payload:            `{"password": "newpassword", "token": "ASDJKLEPOIURERFJDKSLAIEJG1"}`,
+			payload:            `{"password": "newpassword", "token": "123456"}`,
 			expectedStatusCode: http.StatusOK,
 			expectedWrapper:    "",
 			expectedResponse: map[string]any{
@@ -307,7 +307,7 @@ func TestUpdateUserPasswordHandler(t *testing.T) {
 		},
 		{
 			name:               "invalid password gets rejected",
-			payload:            `{"password": "123", "token": "ASDJKLEPOIURERFJDKSLAIEJG1"}`,
+			payload:            `{"password": "123", "token": "123456"}`,
 			expectedStatusCode: http.StatusUnprocessableEntity,
 			expectedWrapper:    "error",
 			expectedResponse: map[string]any{
@@ -318,7 +318,7 @@ func TestUpdateUserPasswordHandler(t *testing.T) {
 		},
 		{
 			name:               "invalid token gets rejected",
-			payload:            `{"password": "newpassword", "token": "ASDJKLEPOIURERFJDKSLAIEJG2"}`,
+			payload:            `{"password": "newpassword", "token": "654321"}`,
 			expectedStatusCode: http.StatusUnprocessableEntity,
 			expectedWrapper:    "error",
 			expectedResponse: map[string]any{

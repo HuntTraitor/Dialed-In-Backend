@@ -51,6 +51,17 @@ func (m MockUserModel) GetForToken(tokenScope, tokenPlainText string) (*data.Use
 		}, nil
 	case "ASDJKLEPOIURERFJDKSLAIEJG2":
 		return nil, data.ErrRecordNotFound
+	case "123456":
+		return &data.User{
+			ID:        1,
+			CreatedAt: time.Now().UTC(),
+			Name:      "Test User",
+			Email:     "test@example.com",
+			Activated: false,
+			Version:   1,
+		}, nil
+	case "654321":
+		return nil, data.ErrRecordNotFound
 	default:
 		return nil, nil
 	}
