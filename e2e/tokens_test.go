@@ -59,15 +59,17 @@ func TestAuthenticateUser(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var token string
-			waitFor(t, func() bool {
-				body, _ := getEmail(t, "containing", "token")
-				token = extractToken(t, body)
-				return token != ""
-			})
 
-			// activate the user
-			_ = activateUser(t, token)
+			//TODO recomment this when activate user is turned on
+			//var token string
+			//waitFor(t, func() bool {
+			//	body, _ := getEmail(t, "containing", "token")
+			//	token = extractToken(t, body)
+			//	return token != ""
+			//})
+			//
+			//// activate the user
+			//_ = activateUser(t, token)
 
 			requestURL := fmt.Sprintf("http://localhost:%d/v1/tokens/authentication", 3001)
 			statusCode, _, body := post(t, requestURL, strings.NewReader(tt.payload), nil)
