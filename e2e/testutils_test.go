@@ -231,15 +231,16 @@ func ptr[T any](v T) *T {
 // extractToken takes an email body from mailhog and returns the token inside of that body
 func extractToken(t *testing.T, emailContent string) string {
 	t.Helper()
-	re := regexp.MustCompile(`\\?"token\\?":\\?\s*\\?"([A-Z0-9]+)\\?"`)
+	// Look for the text right before the token, then capture 6 digits after it
+	re := regexp.MustCompile(`Your one-time password reset token is:[^0-9]*([0-9]{6})`)
+
 	match := re.FindStringSubmatch(emailContent)
 
 	if len(match) > 1 {
-		// The token is in the first capturing group
-		return match[1]
-	} else {
-		t.Fatal("failed to extract token")
+		return match[1] // the 6-digit token
 	}
+
+	t.Fatal("failed to extract 6-digit token")
 	return ""
 }
 

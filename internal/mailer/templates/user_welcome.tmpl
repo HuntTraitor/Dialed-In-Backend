@@ -1,40 +1,35 @@
 {{define "subject"}}Welcome to Dialed-In!{{end}}
 
 {{define "plainBody"}}
-Hello!
+Hello {{.userName}},
 
-Thanks for signing up, we hope to serve as a general guideline on how you can better experience your morning cup of coffee!
+Welcome to Dialed-In! We're excited to help you elevate your coffee experience and make every cup a little better.
 
-Please send a request to the `PUT /v1/users/activated` endpoint with the following JSON body to activate your account:
+If you have any questions or feedback, feel free to reach out to us at dialedincafe@gmail.com.
 
-{"token": "{{.activationToken}}"}
-
-Please note that this is a one time use token and will expire in 3 days
-
-Thank you!
-
+Thank you for joining us,
 The Dialed-In Team
 {{end}}
 
 {{define "htmlBody"}}
 <!doctype html>
 <html>
-    <head>
-        <meta name="viewport" content="width=device-width" />
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    </head>
+  <head>
+    <meta name="viewport" content="width=device-width" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  </head>
 
-    <body>
-        <p>Hello!</p>
-        <p>Thanks for signing up, we hope to serve as a general guideline on how you can better experience your morning cup of coffee!</p>
-        <p>Please send a request to the `PUT /v1/users/activated` endpoint with the following JSON body to activate your account:</p>
-        <pre><code>
-        {"token": "{{.activationToken}}"}
-        </code></pre>
-        <p>Please note that this is a one time use token and will expire in 3 days</p>
-        <p>Thank you!<p/>
-        <p>The Dialed-In Team</p>
-    </body>
+  <body>
+    <p>Hello {{.userName}},</p>
+
+    <p>Welcome to <strong>Dialed-In</strong>! We're excited to help you elevate your coffee experience and make every cup a little better.</p>
+
+    <p>If you have any questions or feedback, feel free to reach out to us at
+      <a href="mailto:dialedincafe@gmail.com">dialedincafe@gmail.com</a>.
+    </p>
+
+    <p>Thank you for joining us,</p>
+    <p>The Dialed-In Team</p>
+  </body>
 </html>
 {{end}}
-
