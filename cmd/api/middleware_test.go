@@ -73,8 +73,8 @@ func TestLogRequest(t *testing.T) {
 		rr := httptest.NewRecorder()
 
 		loggerMiddleware.ServeHTTP(rr, req)
-		expectedRequestLog := "method=GET uri=/ body=\""
-		expectedResponseLog := "status=200 body=TestResponseBody"
+		expectedRequestLog := `method=GET uri=/ body=""`
+		expectedResponseLog := `status=200 body="Test Response Body"`
 
 		// Read from the buffer and assert the logs are correct
 		assert.Contains(t, buf.String(), expectedRequestLog)

@@ -76,38 +76,28 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 // logRequest logs the incoming request in the logger
 func (app *application) logRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var (
-			ip     = r.RemoteAddr
-			proto  = r.Proto
-			method = r.Method
-			uri    = r.URL.RequestURI()
-		)
+		rawBody, _ := io.ReadAll(r.Body)
+		r.Body = io.NopCloser(bytes.NewReader(rawBody))
 
-		var body []byte
-		if r.Body != nil {
-			body, _ = io.ReadAll(r.Body)
-			r.Body = io.NopCloser(bytes.NewReader(body)) // Reset the body for further handlers
-		}
-		prettyBody := strings.ReplaceAll(string(body), " ", "")
-		prettyBody = strings.ReplaceAll(prettyBody, "\n", "")
+		sanitized := sanitizeMultipartBody(rawBody, r.Header.Get("Content-Type"))
 
 		app.logger.Info("received request",
-			"ip", ip,
-			"proto", proto,
-			"method", method,
-			"uri", uri,
-			"body", prettyBody,
+			"ip", r.RemoteAddr,
+			"proto", r.Proto,
+			"method", r.Method,
+			"uri", r.URL.RequestURI(),
+			"body", sanitized,
 		)
 
 		ww := newWrappedResponseWriter(w)
-
 		next.ServeHTTP(ww, r)
 
-		responseBody := strings.ReplaceAll(ww.body.String(), " ", "")
-		responseBody = strings.ReplaceAll(responseBody, "\n", "")
-		responseBody = strings.ReplaceAll(responseBody, "\t", "")
+		responseBody := sanitizeMultipartBody(ww.body.Bytes(), w.Header().Get("Content-Type"))
 
-		app.logger.Info("received response", "status", ww.statusCode, "body", responseBody)
+		app.logger.Info("received response",
+			"status", ww.statusCode,
+			"body", responseBody,
+		)
 	})
 }
 

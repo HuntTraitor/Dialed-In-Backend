@@ -270,16 +270,16 @@ func authenticateUser(t *testing.T, email string, password string) map[string]an
 }
 
 // activateUser calls a put request to /users/activated to activate a user
-func activateUser(t *testing.T, token string) map[string]any {
-	t.Helper()
-	payload := fmt.Sprintf(`{
-				"token": "%s"
-			}`, token)
-
-	requestURL := fmt.Sprintf("http://localhost:%d/v1/users/activated", 3001)
-	_, _, body := put(t, requestURL, strings.NewReader(payload))
-	return body
-}
+//func activateUser(t *testing.T, token string) map[string]any {
+//	t.Helper()
+//	payload := fmt.Sprintf(`{
+//				"token": "%s"
+//			}`, token)
+//
+//	requestURL := fmt.Sprintf("http://localhost:%d/v1/users/activated", 3001)
+//	_, _, body := put(t, requestURL, strings.NewReader(payload))
+//	return body
+//}
 
 func createCoffee(t *testing.T, authToken string, coffee data.Coffee, image []byte) map[string]any {
 	t.Helper()
