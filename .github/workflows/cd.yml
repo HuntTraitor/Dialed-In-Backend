@@ -20,9 +20,21 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.inputs.branch }}
 
-      # Create a dummy .env so Makefile doesn’t choke
       - name: Create empty .env
         run: touch .env
+
+      # Determine the tag – use commit hash if no tag exists
+      - name: Determine IMAGE_TAG
+        run: |
+          # If this is a tagged run (release event)
+          if [ ! -z "${{ github.event.release.tag_name }}" ]; then
+            echo "IMAGE_TAG=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+          else
+            # Manual dispatch: derive tag from commit SHA
+            SHA=$(git rev-parse --short HEAD)
+            echo "IMAGE_TAG=$SHA" >> $GITHUB_ENV
+          fi
+        shell: bash
 
       - name: Log in to GHCR
         uses: docker/login-action@v2
@@ -31,19 +43,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-
       - name: Build Docker image
         run: |
           docker build \
             --platform linux/amd64 \
             -f Dockerfile \
-            -t ghcr.io/${{ github.repository }}/backend:${{ github.event.inputs.tag || github.event.release.tag_name }} \
+            -t ghcr.io/${{ github.repository }}/backend:${IMAGE_TAG} \
             -t ghcr.io/${{ github.repository }}/backend:latest \
             .
 
       - name: Push Docker image
         run: |
-          docker push ghcr.io/${{ github.repository }}/backend:${{ github.event.inputs.tag || github.event.release.tag_name }}
+          docker push ghcr.io/${{ github.repository }}/backend:${IMAGE_TAG}
           docker push ghcr.io/${{ github.repository }}/backend:latest
 
       - name: Install SSH key
@@ -51,7 +62,7 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.PROD_SSH_KEY }}
 
-      - name: Add known hosts
+      - name: Add known host
         run: ssh-keyscan -H ${{ secrets.PROD_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy to Production
