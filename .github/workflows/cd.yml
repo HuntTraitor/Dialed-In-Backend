@@ -22,6 +22,9 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.inputs.tag || github.event.release.tag_name }}
 
+      - name: Create empty .env for Make
+        run: touch .env
+
       - name: Install SSH key
         uses: webfactory/ssh-agent@v0.7.0
         with:
