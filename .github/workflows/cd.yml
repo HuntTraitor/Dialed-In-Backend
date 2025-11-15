@@ -1,12 +1,11 @@
-name: Production Deploy
+name: Dialed-In-Backend-CD
 
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Which release tag to deploy?"
-        required: false
-        default: "latest"
+        description: "Release tag to deploy (e.g. v1.0.0)"
+        required: true
 
   release:
     types: [published]
