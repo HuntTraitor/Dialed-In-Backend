@@ -1,7 +1,7 @@
 services:
   app:
     container_name: web
-    image: ghcr.io/hunttraitor/dialed-in-backend/backend:latest
+    image: ghcr.io/hunttraitor/dialed-in-backend:latest
     restart: always
 
     environment:
