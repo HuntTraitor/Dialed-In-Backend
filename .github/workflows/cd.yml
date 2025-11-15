@@ -13,6 +13,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: Dialed-In-Backend-CD
 
     steps:
       - name: Checkout code
