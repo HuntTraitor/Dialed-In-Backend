@@ -23,18 +23,18 @@ jobs:
       - name: Create empty .env
         run: touch .env
 
-      # Determine the tag – use commit hash if no tag exists
       - name: Determine IMAGE_TAG
         run: |
-          # If this is a tagged run (release event)
           if [ ! -z "${{ github.event.release.tag_name }}" ]; then
             echo "IMAGE_TAG=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
           else
-            # Manual dispatch: derive tag from commit SHA
             SHA=$(git rev-parse --short HEAD)
             echo "IMAGE_TAG=$SHA" >> $GITHUB_ENV
           fi
-        shell: bash
+
+      # Build the lowercase repo name
+      - name: Compute lowercase image name
+        run: echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}/backend" >> $GITHUB_ENV
 
       - name: Log in to GHCR
         uses: docker/login-action@v2
@@ -48,14 +48,14 @@ jobs:
           docker build \
             --platform linux/amd64 \
             -f Dockerfile \
-            -t ghcr.io/${{ github.repository }}/backend:${IMAGE_TAG} \
-            -t ghcr.io/${{ github.repository }}/backend:latest \
+            -t ${IMAGE_NAME}:${IMAGE_TAG} \
+            -t ${IMAGE_NAME}:latest \
             .
 
       - name: Push Docker image
         run: |
-          docker push ghcr.io/${{ github.repository }}/backend:${IMAGE_TAG}
-          docker push ghcr.io/${{ github.repository }}/backend:latest
+          docker push ${IMAGE_NAME}:${IMAGE_TAG}
+          docker push ${IMAGE_NAME}:latest
 
       - name: Install SSH key
         uses: webfactory/ssh-agent@v0.7.0
