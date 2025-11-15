@@ -106,20 +106,16 @@ audit:
 # PRODUCTION
 # ==================================================================================== #
 
-production_host_ip = '143.198.167.26'
+production_host_ip = $(PROD_HOST)
 
 ## prod/deploy: deploy to production
 .PHONY: prod/deploy
 prod/deploy:
-	ssh -t root@${production_host_ip} '\
-        cd app/Dialed-In-Backend && \
-        git pull && \
-        make build && \
-        docker compose -f production-compose.yml down && \
-        docker compose -f production-compose.yml up --build -d && \
-        echo "sleep for 3 seconds..." && \
-        sleep 3 && \
-        make up \
+	ssh -o StrictHostKeyChecking=no $(PROD_USER)@$(production_host_ip) '\
+		cd /root/Dialed-In-Backend && \
+		git pull && \
+		docker compose -f production-compose.yml stop app && \
+		docker compose -f production-compose.yml up -d --build app \
 	'
 
 ## prod/connect: connect to the production server
