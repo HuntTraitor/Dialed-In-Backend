@@ -112,7 +112,7 @@ production_host_ip = $(PROD_HOST)
 .PHONY: prod/deploy
 prod/deploy:
 	ssh -o StrictHostKeyChecking=no $(PROD_USER)@$(production_host_ip) '\
-		cd /root/Dialed-In-Backend && \
+		cd /root/app/Dialed-In-Backend && \
 		git pull && \
 		docker compose -f production-compose.yml stop app && \
 		docker compose -f production-compose.yml up -d --build app \
