@@ -111,18 +111,14 @@ production_host_ip = $(PROD_HOST)
 ## prod/deploy: deploy to production
 .PHONY: prod/deploy
 prod/deploy:
-	ssh -o StrictHostKeyChecking=no $(PROD_USER)@$(production_host_ip) '\
-		echo "whoami:"; whoami; \
-		echo "hostname:"; hostname; \
-		echo "pwd (start):"; pwd; \
-		echo "ls /:"; ls /; \
-		echo "ls /root:"; ls /root || echo "cannot ls /root"; \
-		echo "ls /root/app:"; ls /root/app || echo "cannot ls /root/app"; \
+	ssh -o StrictHostKeyChecking=no \
+	    -o ServerAliveInterval=30 \
+	    -o ServerAliveCountMax=10 \
+	    $(PROD_USER)@$(production_host_ip) '\
 		cd /root/app/Dialed-In-Backend && \
-		echo "pwd (after cd):"; pwd && \
 		git pull && \
-		docker compose -f production-compose.yml stop app && \
-		docker compose -f production-compose.yml up -d --build app \
+		docker compose -f production-compose.yml pull app && \
+		docker compose -f production-compose.yml up -d app \
 	'
 
 ## prod/connect: connect to the production server

@@ -1,6 +1,9 @@
 services:
   app:
     container_name: web
+    image: ghcr.io/hunttraitor/dialed-in-backend/backend:latest
+    restart: always
+
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -14,14 +17,10 @@ services:
       - S3_BUCKET=${S3_BUCKET}
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
       - S3_SECRET_KEY=${S3_SECRET_KEY}
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: prod
-    restart: on-failure
+
     expose:
       - "3000"
-    command: ["/app/bin/api", "-metrics=true", "-env=production"]
+
     depends_on:
       - db
 
