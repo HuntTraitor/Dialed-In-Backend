@@ -117,6 +117,7 @@ prod/deploy:
 	    $(PROD_USER)@$(production_host_ip) '\
 		cd /root/app/Dialed-In-Backend && \
 		git pull && \
+		chmod +x scripts/migrate.sh \
 		./scripts/migrate.sh && \
 		docker compose -f production-compose.yml pull app && \
 		docker compose -f production-compose.yml up -d app \
