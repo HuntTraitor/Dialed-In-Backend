@@ -92,5 +92,5 @@ func (app *application) unknownCoffeeResponse(w http.ResponseWriter, r *http.Req
 
 func (app *application) unknownMethodResponse(w http.ResponseWriter, r *http.Request) {
 	message := "the requested method could not be found"
-	app.errorResponse(w, r, http.StatusNotImplemented, message)
+	app.errorResponse(w, r, http.StatusNotFound, message)
 }

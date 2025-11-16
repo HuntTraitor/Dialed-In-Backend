@@ -17,7 +17,7 @@ type Recipe struct {
 	ID        int64           `json:"id,omitempty"`
 	UserID    int64           `json:"user_id,omitempty"`
 	MethodID  int64           `json:"method_id"`
-	CoffeeID  int64           `json:"coffee_id"`
+	CoffeeID  *int64          `json:"coffee_id,omitempty"`
 	Info      json.RawMessage `json:"info"`
 	CreatedAt string          `json:"created_at,omitempty"`
 	Version   int             `json:"version,omitempty"`
@@ -27,7 +27,7 @@ type FullRecipe struct {
 	ID        int64           `json:"id"`
 	UserID    int64           `json:"user_id"`
 	Method    Method          `json:"method"`
-	Coffee    Coffee          `json:"coffee"`
+	Coffee    *Coffee         `json:"coffee,omitempty"`
 	Info      json.RawMessage `json:"info"`
 	CreatedAt string          `json:"created_at"`
 	Version   int             `json:"version"`

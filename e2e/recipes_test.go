@@ -135,7 +135,7 @@ func TestCreateRecipe(t *testing.T) {
 			expectedStatusCode: http.StatusNotFound,
 			expectedResponse:   nil,
 			expectedError: map[string]any{
-				"error": "The requested resource could not be found.",
+				"error": "the requested coffee could not be found",
 			},
 		},
 		{
@@ -169,7 +169,7 @@ func TestCreateRecipe(t *testing.T) {
 			expectedStatusCode: http.StatusNotFound,
 			expectedResponse:   nil,
 			expectedError: map[string]any{
-				"error": "The requested resource could not be found.",
+				"error": "the requested method could not be found",
 			},
 		},
 		{
@@ -366,7 +366,7 @@ func TestListRecipes(t *testing.T) {
 	}
 
 	insertedRecipe := data.Recipe{
-		CoffeeID: 1,
+		CoffeeID: ptr(int64(1)),
 		MethodID: 2,
 		Info:     jsonBytes,
 	}

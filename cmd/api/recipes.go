@@ -16,7 +16,7 @@ func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Reque
 
 	var input struct {
 		MethodId int64           `json:"method_id"`
-		CoffeeId int64           `json:"coffee_id"`
+		CoffeeId *int64          `json:"coffee_id,omitempty"`
 		Info     json.RawMessage `json:"info"`
 	}
 
@@ -37,7 +37,7 @@ func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-			app.notFoundResponse(w, r)
+			app.unknownMethodResponse(w, r)
 		default:
 			app.serverErrorResponse(w, r, err)
 		}
@@ -50,30 +50,34 @@ func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	coffee, err := app.models.Coffees.GetOne(recipe.CoffeeID, recipe.UserID)
-	if err != nil {
-		switch {
-		case errors.Is(err, data.ErrRecordNotFound):
-			app.notFoundResponse(w, r)
-		default:
-			app.serverErrorResponse(w, r, err)
-		}
-		return
-	}
+	var coffee *data.Coffee
 
-	// pre-sign the image url
-	if coffee.Info.Img != "" {
-		imgURL, err := s3.PreSignURL(
-			s3.WithPresigner(app.s3.Presigner),
-			s3.WithPresignBucket(app.config.s3.bucket),
-			s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
-			s3.WithPresignExpiration(time.Hour*24),
-		)
+	if recipe.CoffeeID != nil {
+		coffee, err = app.models.Coffees.GetOne(*recipe.CoffeeID, recipe.UserID)
 		if err != nil {
-			app.serverErrorResponse(w, r, err)
+			switch {
+			case errors.Is(err, data.ErrRecordNotFound):
+				app.unknownCoffeeResponse(w, r)
+			default:
+				app.serverErrorResponse(w, r, err)
+			}
 			return
 		}
-		coffee.Info.Img = imgURL
+
+		// pre-sign the image url if we actually have a coffee
+		if coffee != nil && coffee.Info.Img != "" {
+			imgURL, err := s3.PreSignURL(
+				s3.WithPresigner(app.s3.Presigner),
+				s3.WithPresignBucket(app.config.s3.bucket),
+				s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
+				s3.WithPresignExpiration(time.Hour*24),
+			)
+			if err != nil {
+				app.serverErrorResponse(w, r, err)
+				return
+			}
+			coffee.Info.Img = imgURL
+		}
 	}
 
 	err = app.models.Recipes.Insert(recipe)
@@ -86,7 +90,7 @@ func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Reque
 		ID:        recipe.ID,
 		UserID:    recipe.UserID,
 		Method:    *method,
-		Coffee:    *coffee,
+		Coffee:    coffee,
 		Info:      recipe.Info,
 		CreatedAt: recipe.CreatedAt,
 		Version:   recipe.Version,
@@ -109,41 +113,51 @@ func (app *application) listRecipesHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	fullRecipes := []*data.FullRecipe{}
+	fullRecipes := make([]*data.FullRecipe, 0, len(recipes))
 
 	for _, recipe := range recipes {
-		coffee, err := app.models.Coffees.GetOne(recipe.CoffeeID, recipe.UserID)
-		if err != nil {
-			app.serverErrorResponse(w, r, err)
-			return
-		}
-
-		if coffee.Info.Img != "" {
-			// pre-sign the image url
-			imgURL, err := s3.PreSignURL(
-				s3.WithPresigner(app.s3.Presigner),
-				s3.WithPresignBucket(app.config.s3.bucket),
-				s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
-				s3.WithPresignExpiration(time.Hour*24),
-			)
-			if err != nil {
-				app.serverErrorResponse(w, r, err)
-				return
-			}
-			coffee.Info.Img = imgURL
-		}
-
 		method, err := app.models.Methods.GetOne(recipe.MethodID)
 		if err != nil {
 			app.serverErrorResponse(w, r, err)
 			return
 		}
 
+		// Coffee is optional
+		var coffee *data.Coffee
+
+		if recipe.CoffeeID != nil {
+			coffee, err = app.models.Coffees.GetOne(*recipe.CoffeeID, recipe.UserID)
+			if err != nil {
+				switch {
+				case errors.Is(err, data.ErrRecordNotFound):
+					app.unknownCoffeeResponse(w, r)
+				default:
+					app.serverErrorResponse(w, r, err)
+				}
+				return
+			}
+
+			// Pre-sign image URL only if we actually have a coffee and an image
+			if coffee != nil && coffee.Info.Img != "" {
+				imgURL, err := s3.PreSignURL(
+					s3.WithPresigner(app.s3.Presigner),
+					s3.WithPresignBucket(app.config.s3.bucket),
+					s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
+					s3.WithPresignExpiration(time.Hour*24),
+				)
+				if err != nil {
+					app.serverErrorResponse(w, r, err)
+					return
+				}
+				coffee.Info.Img = imgURL
+			}
+		}
+
 		fullRecipe := &data.FullRecipe{
 			ID:        recipe.ID,
 			UserID:    recipe.UserID,
 			Method:    *method,
-			Coffee:    *coffee,
+			Coffee:    coffee,
 			Info:      recipe.Info,
 			CreatedAt: recipe.CreatedAt,
 			Version:   recipe.Version,
@@ -171,7 +185,7 @@ func (app *application) updateRecipeHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-			app.notFoundResponse(w, r)
+			app.unknownCoffeeResponse(w, r)
 		default:
 			fmt.Println(err)
 			app.serverErrorResponse(w, r, err)
@@ -196,7 +210,7 @@ func (app *application) updateRecipeHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	if input.CoffeeID != nil {
-		recipe.CoffeeID = *input.CoffeeID
+		recipe.CoffeeID = input.CoffeeID
 	}
 
 	if input.Info != nil {
@@ -209,31 +223,40 @@ func (app *application) updateRecipeHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	coffee, err := app.models.Coffees.GetOne(recipe.CoffeeID, recipe.UserID)
-	if err != nil {
-		app.unknownCoffeeResponse(w, r)
-		return
+	var coffee *data.Coffee
+
+	if recipe.CoffeeID != nil {
+		coffee, err = app.models.Coffees.GetOne(*recipe.CoffeeID, recipe.UserID)
+		if err != nil {
+			switch {
+			case errors.Is(err, data.ErrRecordNotFound):
+				app.unknownCoffeeResponse(w, r)
+			default:
+				app.serverErrorResponse(w, r, err)
+			}
+			return
+		}
+
+		if coffee != nil && coffee.Info.Img != "" {
+			// pre-sign the image url
+			imgURL, err := s3.PreSignURL(
+				s3.WithPresigner(app.s3.Presigner),
+				s3.WithPresignBucket(app.config.s3.bucket),
+				s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
+				s3.WithPresignExpiration(time.Hour*24),
+			)
+			if err != nil {
+				app.serverErrorResponse(w, r, err)
+				return
+			}
+			coffee.Info.Img = imgURL
+		}
 	}
 
 	v := validator.New()
 	if data.ValidateRecipe(v, recipe); !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return
-	}
-
-	if coffee.Info.Img != "" {
-		// pre-sign the image url
-		imgURL, err := s3.PreSignURL(
-			s3.WithPresigner(app.s3.Presigner),
-			s3.WithPresignBucket(app.config.s3.bucket),
-			s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
-			s3.WithPresignExpiration(time.Hour*24),
-		)
-		if err != nil {
-			app.serverErrorResponse(w, r, err)
-			return
-		}
-		coffee.Info.Img = imgURL
 	}
 
 	err = app.models.Recipes.Update(recipe)
@@ -251,7 +274,7 @@ func (app *application) updateRecipeHandler(w http.ResponseWriter, r *http.Reque
 		ID:        recipe.ID,
 		UserID:    recipe.UserID,
 		Method:    *method,
-		Coffee:    *coffee,
+		Coffee:    coffee,
 		Info:      recipe.Info,
 		CreatedAt: recipe.CreatedAt,
 		Version:   recipe.Version,
@@ -275,7 +298,7 @@ func (app *application) deleteRecipeHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-			app.notFoundResponse(w, r)
+			app.unknownCoffeeResponse(w, r)
 		default:
 			app.serverErrorResponse(w, r, err)
 		}
