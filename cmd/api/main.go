@@ -17,6 +17,7 @@ import (
 	"log/slog"
 	"os"
 	"runtime"
+	"strconv"
 	"sync"
 	"time"
 
@@ -79,9 +80,16 @@ func main() {
 	databaseURL := os.Getenv("DATABASE_URL")
 	SMTPUsername := os.Getenv("SMTP_USERNAME")
 	SMTPPassword := os.Getenv("SMTP_PASSWORD")
+	SMTPHost := os.Getenv("SMTP_HOST")
 	S3Bucket := os.Getenv("S3_BUCKET")
 	S3AccessKey := os.Getenv("S3_ACCESS_KEY")
 	S3SecretKey := os.Getenv("S3_SECRET_KEY")
+
+	SMTPPort := os.Getenv("SMTP_PORT")
+	port, err := strconv.Atoi(SMTPPort)
+	if err != nil {
+		panic(err)
+	}
 
 	// Setting flags for all the different configurations
 	flag.IntVar(&cfg.port, "port", 3000, "API server port")
@@ -94,8 +102,8 @@ func main() {
 	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
 	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
 	flag.DurationVar(&cfg.limiter.expiration, "limiter-expiration", 3*time.Minute, "Set limiter expiration")
-	flag.StringVar(&cfg.smtp.host, "smtp-host", "sandbox.smtp.mailtrap.io", "SMTP host")
-	flag.IntVar(&cfg.smtp.port, "smtp-port", 2525, "SMTP port")
+	flag.StringVar(&cfg.smtp.host, "smtp-host", SMTPHost, "SMTP host")
+	flag.IntVar(&cfg.smtp.port, "smtp-port", port, "SMTP port")
 	flag.StringVar(&cfg.smtp.username, "smtp-username", SMTPUsername, "SMTP username")
 	flag.StringVar(&cfg.smtp.password, "smtp-password", SMTPPassword, "SMTP password")
 	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Dialed-In <no-reply@dialedincafe.com>", "SMTP sender")
