@@ -20,6 +20,11 @@ import (
 
 type envelope map[string]any
 
+type NullInt64 struct {
+	Value   *int64
+	Present bool
+}
+
 // readIDParam reads the id parameter and returns the id if its valid
 func (app *application) readIDParam(r *http.Request) (int64, error) {
 	param := chi.URLParam(r, "id")
@@ -287,4 +292,21 @@ func sanitizeMultipartBody(body []byte, contentType string) string {
 // sanitizeNonMultipartBody just returns the stringified body
 func sanitizeNonMultipartBody(body []byte) string {
 	return string(body)
+}
+
+func (n *NullInt64) UnmarshalJSON(data []byte) error {
+	n.Present = true
+
+	if string(data) == "null" {
+		n.Value = nil
+		return nil
+	}
+
+	var v int64
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+
+	n.Value = &v
+	return nil
 }

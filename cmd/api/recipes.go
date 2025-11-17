@@ -195,7 +195,7 @@ func (app *application) updateRecipeHandler(w http.ResponseWriter, r *http.Reque
 
 	var input struct {
 		MethodID *int64           `json:"method_id"`
-		CoffeeID *int64           `json:"coffee_id"`
+		CoffeeID NullInt64        `json:"coffee_id"`
 		Info     *json.RawMessage `json:"info"`
 	}
 
@@ -209,8 +209,8 @@ func (app *application) updateRecipeHandler(w http.ResponseWriter, r *http.Reque
 		recipe.MethodID = *input.MethodID
 	}
 
-	if input.CoffeeID != nil {
-		recipe.CoffeeID = input.CoffeeID
+	if input.CoffeeID.Present {
+		recipe.CoffeeID = input.CoffeeID.Value
 	}
 
 	if input.Info != nil {
