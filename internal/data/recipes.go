@@ -88,12 +88,12 @@ func ValidateRecipe(v *validator.Validator, recipe *Recipe) {
 		v.Check(info.GramIn > 0, "grams_in", "must be greater than zero")
 		v.Check(info.MlOut < 1000, "ml_out", "must be less than a thousand")
 		v.Check(info.GramIn < 10000, "grams_in", "must be less than ten thousand")
+		v.Check(len(info.Phases) > 0, "phases", "must be greater than zero")
 		for _, phase := range info.Phases {
 			ValidateV60Phase(v, &phase)
 		}
 
 	case 2:
-		fmt.Println(recipe)
 		info, ok := decodeInfoStrict[SwitchRecipeInfo](v, recipe.Info)
 		if !ok {
 			return
@@ -193,7 +193,7 @@ func (m RecipeModel) GetAllForUser(userID int64, params url.Values) ([]*Recipe, 
 		argIndex++
 	}
 
-	query += " ORDER BY id"
+	query += " ORDER BY coffee_id IS NOT NULL, coffee_id"
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
