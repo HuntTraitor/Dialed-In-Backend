@@ -6,8 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"time"
+
+	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 )
 
 type Coffee struct {
@@ -31,6 +32,7 @@ type CoffeeInfo struct {
 	Cost         float64  `json:"cost,omitempty"`
 	Img          string   `json:"img,omitempty"`
 	Description  string   `json:"description,omitempty"`
+	Variety      string   `json:"variety,omitempty"`
 }
 
 type CoffeeModel struct {
@@ -57,6 +59,7 @@ func ValidateCoffee(v *validator.Validator, coffee *Coffee) {
 	v.Check(len(coffee.Info.TastingNotes) <= 50, "tasting_notes", "must not contain more than 50 entries")
 	v.Check(len(coffee.Info.RoastLevel) <= 100, "roast_level", "must not be more than 100 bytes long")
 	v.Check(coffee.Info.Cost <= 1_000_000, "cost", "must not be more than 1,000,000")
+	v.Check(len(coffee.Info.Variety) <= 200, "variety", "must not be more than 200 bytes long")
 	v.Check(coffee.Info.Cost >= 0, "cost", "must not be less than 0")
 	for i, note := range coffee.Info.TastingNotes {
 		field := fmt.Sprintf("tasting_notes[%d]", i)

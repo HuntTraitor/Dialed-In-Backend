@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -13,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hunttraitor/dialed-in-backend/internal/data"
 )
 
 const (
@@ -307,6 +308,7 @@ func createCoffee(t *testing.T, authToken string, coffee data.Coffee, image []by
 	writeField("rating", strconv.Itoa(info.Rating))
 	writeField("cost", fmt.Sprintf("%.2f", info.Cost))
 	writeField("decaf", strconv.FormatBool(info.Decaf))
+	writeField("variety", info.Variety)
 
 	// Add tasting_notes as repeated form fields
 	for _, note := range info.TastingNotes {

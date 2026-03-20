@@ -22,6 +22,7 @@ var MockCoffee = &data.Coffee{
 		Cost:         13.75,
 		Img:          "https://example.com/mock-coffee.png",
 		Description:  "A test mock coffee used for unit testing.",
+		Variety:      "SL98",
 	},
 }
 

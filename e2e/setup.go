@@ -3,8 +3,6 @@ package e2e
 import (
 	"database/sql"
 	"fmt"
-	"github.com/joho/godotenv"
-	"github.com/pressly/goose/v3"
 	"log"
 	"math/rand"
 	"net"
@@ -14,6 +12,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/joho/godotenv"
+	"github.com/pressly/goose/v3"
 )
 
 const (
@@ -24,7 +25,7 @@ const (
 func LaunchTestProgram(port string) (cleanup func(), sendInterrupt func() error, err error) {
 
 	// Suppress output to reduce clutter in CI
-	suppressOutput()
+	//suppressOutput()
 
 	err = godotenv.Load("../.env")
 	if err != nil {

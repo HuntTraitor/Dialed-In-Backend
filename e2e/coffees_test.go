@@ -3,13 +3,14 @@ package e2e
 import (
 	"bytes"
 	"fmt"
-	"github.com/hunttraitor/dialed-in-backend/internal/mocks"
-	"github.com/stretchr/testify/assert"
 	"mime/multipart"
 	"net/http"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/hunttraitor/dialed-in-backend/internal/mocks"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetAllCoffees(t *testing.T) {
@@ -56,6 +57,7 @@ func TestGetAllCoffees(t *testing.T) {
 			assert.Equal(t, mocks.MockCoffee.Info.RoastLevel, info["roast_level"].(string))
 			assert.Equal(t, mocks.MockCoffee.Info.Cost, info["cost"].(float64))
 			assert.Equal(t, mocks.MockCoffee.Info.Decaf, info["decaf"].(bool))
+			assert.Equal(t, mocks.MockCoffee.Info.Variety, info["variety"].(string))
 			actualNotes := make([]string, len(info["tasting_notes"].([]any)))
 			for i, note := range info["tasting_notes"].([]any) {
 				actualNotes[i] = note.(string)
@@ -92,6 +94,7 @@ func TestPostCoffee(t *testing.T) {
 	longDescription := strings.Repeat("C", 1010)
 	longOriginType := strings.Repeat("o", 110)
 	longTastingNote := []string{strings.Repeat("t", 110)}
+	longVariety := strings.Repeat("v", 210)
 	longTastingNotes := make([]string, 51)
 	for i := range longTastingNotes {
 		longTastingNotes[i] = fmt.Sprintf("note%d", i+1)
@@ -119,6 +122,7 @@ func TestPostCoffee(t *testing.T) {
 				"cost":          mocks.MockCoffee.Info.Cost,
 				"decaf":         mocks.MockCoffee.Info.Decaf,
 				"img":           mocks.MockCoffee.Info.Img,
+				"variety":       mocks.MockCoffee.Info.Variety,
 			},
 			expectedStatusCode: http.StatusCreated,
 			expectedResponse: map[string]any{
@@ -137,6 +141,7 @@ func TestPostCoffee(t *testing.T) {
 					"cost":          mocks.MockCoffee.Info.Cost,
 					"decaf":         mocks.MockCoffee.Info.Decaf,
 					"img":           mocks.MockCoffee.Info.Img,
+					"variety":       mocks.MockCoffee.Info.Variety,
 					"created_at":    "2025-02-01T03:59:07Z",
 					"version":       1,
 				},
@@ -395,6 +400,28 @@ func TestPostCoffee(t *testing.T) {
 				"cost": "must not be more than 1,000,000",
 			},
 		},
+		{
+			name: "Coffee variety too long returns an error",
+			payload: map[string]any{
+				"name":          mocks.MockCoffee.Info.Name,
+				"roaster":       mocks.MockCoffee.Info.Roaster,
+				"region":        mocks.MockCoffee.Info.Region,
+				"process":       mocks.MockCoffee.Info.Process,
+				"description":   mocks.MockCoffee.Info.Description,
+				"origin_type":   mocks.MockCoffee.Info.OriginType,
+				"tasting_notes": mocks.MockCoffee.Info.TastingNotes,
+				"rating":        mocks.MockCoffee.Info.Rating,
+				"roast_level":   mocks.MockCoffee.Info.RoastLevel,
+				"cost":          1_000_001.00,
+				"decaf":         mocks.MockCoffee.Info.Decaf,
+				"img":           mocks.MockCoffee.Info.Img,
+				"variety":       longVariety,
+			},
+			expectedStatusCode: http.StatusUnprocessableEntity,
+			expectedError: map[string]any{
+				"cost": "must not be more than 1,000,000",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -503,6 +530,7 @@ func TestPostCoffee(t *testing.T) {
 		assert.Empty(t, info["rating"])
 		assert.Empty(t, info["img"])
 		assert.Empty(t, info["tasting_notes"])
+		assert.Empty(t, info["variety"])
 	})
 
 	t.Run("Empty params returns an error", func(t *testing.T) {
@@ -595,6 +623,7 @@ func TestUpdateCoffee(t *testing.T) {
 				"decaf":         true,
 				"tasting_notes": []string{"chocolate", "caramel"},
 				"img":           []byte("Updated Image"),
+				"variety":       "Updated Variety",
 			},
 			expectedStatusCode: http.StatusOK,
 			expectedResponse: map[string]any{
@@ -611,6 +640,7 @@ func TestUpdateCoffee(t *testing.T) {
 					"decaf":         true,
 					"tasting_notes": []string{"chocolate", "caramel"},
 					"img":           []byte("Updated Image"),
+					"variety":       "Updated Variety",
 				},
 			},
 			expectedError: nil,
@@ -635,6 +665,7 @@ func TestUpdateCoffee(t *testing.T) {
 					"decaf":         mocks.MockCoffee.Info.Decaf,
 					"tasting_notes": mocks.MockCoffee.Info.TastingNotes,
 					"img":           mocks.MockCoffee.Info.Img,
+					"variety":       mocks.MockCoffee.Info.Variety,
 				},
 			},
 			expectedError: nil,
@@ -657,6 +688,7 @@ func TestUpdateCoffee(t *testing.T) {
 					"decaf":         mocks.MockCoffee.Info.Decaf,
 					"tasting_notes": mocks.MockCoffee.Info.TastingNotes,
 					"img":           mocks.MockCoffee.Info.Img,
+					"variety":       mocks.MockCoffee.Info.Variety,
 				},
 			},
 			expectedError: nil,

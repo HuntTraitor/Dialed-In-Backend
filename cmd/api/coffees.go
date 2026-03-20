@@ -3,13 +3,14 @@ package main
 import (
 	"bytes"
 	"errors"
-	"github.com/hunttraitor/dialed-in-backend/internal/data"
-	"github.com/hunttraitor/dialed-in-backend/internal/s3"
-	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"time"
+
+	"github.com/hunttraitor/dialed-in-backend/internal/data"
+	"github.com/hunttraitor/dialed-in-backend/internal/s3"
+	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 )
 
 func (app *application) listCoffeesHandler(w http.ResponseWriter, r *http.Request) {
@@ -58,6 +59,7 @@ func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Reque
 		RoastLevel   string   `form:"roast_level"`
 		Cost         float64  `form:"cost"`
 		Image        []byte   `form:"image"`
+		Variety      string   `form:"variety"`
 	}
 
 	// limit 10mb
@@ -97,6 +99,7 @@ func (app *application) createCoffeeHandler(w http.ResponseWriter, r *http.Reque
 			Rating:       input.Rating,
 			RoastLevel:   input.RoastLevel,
 			Cost:         float64(input.Cost),
+			Variety:      input.Variety,
 			// Img will be set from `img` or base64/image path
 		},
 	}
@@ -228,6 +231,7 @@ func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Reque
 		RoastLevel   *string   `form:"roast_level"`
 		Cost         *float64  `form:"cost"`
 		Image        []byte    `form:"image"`
+		Variety      *string   `form:"variety"`
 	}
 
 	err = app.readMultipart(w, r, &input)
@@ -268,6 +272,9 @@ func (app *application) updateCoffeeHandler(w http.ResponseWriter, r *http.Reque
 	}
 	if input.Cost != nil {
 		coffee.Info.Cost = *input.Cost
+	}
+	if input.Variety != nil {
+		coffee.Info.Variety = *input.Variety
 	}
 
 	// check if an image is uploaded and if so replace the image
