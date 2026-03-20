@@ -93,4 +93,6 @@ func (app *application) loadGrinderRoutes(router chi.Router) {
 	router.With(app.requireAuthenticatedUser).Get("/", app.listGrindersHandler)
 	router.With(app.requireAuthenticatedUser).Post("/", app.createGrinderHandler)
 	router.With(app.requireAuthenticatedUser).Get("/{id}", app.getGrinderHandler)
+	router.With(app.requireAuthenticatedUser).Patch("/{id}", app.updateGrinderHandler)
+	router.With(app.requireAuthenticatedUser).Delete("/{id}", app.deleteGrinderHandler)
 }

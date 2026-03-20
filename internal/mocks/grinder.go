@@ -15,3 +15,11 @@ func (m MockGrinderModel) GetOne(id int64, userId int64) (*data.Grinder, error) 
 func (m MockGrinderModel) GetAllForUser(userId int64) ([]*data.Grinder, error) {
 	return []*data.Grinder{}, nil
 }
+
+func (m MockGrinderModel) Update(grinder *data.Grinder) error {
+	return nil
+}
+
+func (m MockGrinderModel) Delete(id int64, userId int64) error {
+	return nil
+}

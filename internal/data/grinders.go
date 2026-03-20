@@ -25,6 +25,8 @@ type GrinderModelInterface interface {
 	GetAllForUser(userId int64) ([]*Grinder, error)
 	Insert(grinder *Grinder) error
 	GetOne(id int64, userId int64) (*Grinder, error)
+	Update(grinder *Grinder) error
+	Delete(id int64, userId int64) error
 }
 
 func ValidateGrinder(v *validator.Validator, grinder *Grinder) {
@@ -103,6 +105,55 @@ func (m GrinderModel) Insert(grinder *Grinder) error {
 	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&grinder.ID, &grinder.CreatedAt, &grinder.Version)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (m GrinderModel) Update(grinder *Grinder) error {
+	query := `    UPDATE grinders
+    SET name = $1, version = version + 1
+    WHERE id = $2 AND version = $3
+    RETURNING version`
+
+	args := []any{grinder.Name, grinder.ID, grinder.Version}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&grinder.Version)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrEditConflict
+		default:
+			return err
+		}
+	}
+	return nil
+}
+
+func (m GrinderModel) Delete(id int64, userId int64) error {
+	if id < 1 || userId < 1 {
+		return ErrRecordNotFound
+	}
+
+	query := `DELETE FROM grinders WHERE id = $1 AND user_id = $2`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	result, err := m.DB.ExecContext(ctx, query, id, userId)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return ErrRecordNotFound
 	}
 	return nil
 }
