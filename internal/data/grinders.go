@@ -10,11 +10,11 @@ import (
 )
 
 type Grinder struct {
-	ID        int64  `json:"id"`
-	UserId    int64  `json:"user_id"`
+	ID        int64  `json:"id,omitempty"`
+	UserId    int64  `json:"user_id,omitempty"`
 	Name      string `json:"name"`
-	CreatedAt string `json:"created_at"`
-	Version   int64  `json:"version"`
+	CreatedAt string `json:"created_at,omitempty"`
+	Version   int64  `json:"version,omitempty"`
 }
 
 type GrinderModel struct {

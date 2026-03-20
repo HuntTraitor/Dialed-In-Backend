@@ -353,3 +353,18 @@ func createRecipe(t *testing.T, authToken string, recipe data.Recipe) map[string
 	_, _, body := post(t, requestURL, bytes.NewReader(payloadBytes), requestHeaders)
 	return body
 }
+
+func createGrinder(t *testing.T, authToken string, grinder data.Grinder) map[string]any {
+	t.Helper()
+	requestURL := fmt.Sprintf("http://localhost:%d/v1/grinders", 3001)
+	payloadBytes, err := json.Marshal(grinder)
+	if err != nil {
+		t.Fatalf("failed to marshal payload: %v", err)
+	}
+	requestHeaders := map[string]string{
+		"Authorization": fmt.Sprintf("Bearer %s", authToken),
+	}
+
+	_, _, body := post(t, requestURL, bytes.NewReader(payloadBytes), requestHeaders)
+	return body
+}

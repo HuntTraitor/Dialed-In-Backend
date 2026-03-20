@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/hunttraitor/dialed-in-backend/internal/data"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
+
+	"github.com/hunttraitor/dialed-in-backend/internal/data"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateRecipe(t *testing.T) {
@@ -32,9 +33,16 @@ func TestCreateRecipe(t *testing.T) {
 	}
 	createCoffee(t, token, insertedCoffee, []byte(insertedCoffee.Info.Img))
 
+	insertedGrinder := data.Grinder{
+		Name: "Test Grinder",
+	}
+	bod := createGrinder(t, token, insertedGrinder)
+	fmt.Println(bod)
+
 	correctPayload := map[string]any{
-		"coffee_id": 1,
-		"method_id": 2,
+		"coffee_id":  1,
+		"method_id":  2,
+		"grinder_id": 1,
 		"info": map[string]any{
 			"name":     "Test Name",
 			"grams_in": 20,
@@ -79,6 +87,9 @@ func TestCreateRecipe(t *testing.T) {
 						"name": "Test Coffee",
 					},
 				},
+				"grinder": map[string]any{
+					"name": "Test Grinder",
+				},
 				"info": map[string]any{
 					"name":     "Test Name",
 					"grams_in": 20,
@@ -107,8 +118,9 @@ func TestCreateRecipe(t *testing.T) {
 		{
 			name: "Returns 404 on insert to unknown coffee",
 			payload: map[string]any{
-				"coffee_id": 0,
-				"method_id": 2,
+				"coffee_id":  0,
+				"method_id":  2,
+				"grinder_id": 1,
 				"info": map[string]any{
 					"name":     "Test Name",
 					"grams_in": 20,
@@ -141,8 +153,9 @@ func TestCreateRecipe(t *testing.T) {
 		{
 			name: "Returns 404 on no method found",
 			payload: map[string]any{
-				"coffee_id": 1,
-				"method_id": 0,
+				"coffee_id":  1,
+				"method_id":  0,
+				"grinder_id": 1,
 				"info": map[string]any{
 					"name":     "Test Name",
 					"grams_in": 20,
@@ -170,6 +183,41 @@ func TestCreateRecipe(t *testing.T) {
 			expectedResponse:   nil,
 			expectedError: map[string]any{
 				"error": "the requested method could not be found",
+			},
+		},
+		{
+			name: "Returns 404 on no grinder found",
+			payload: map[string]any{
+				"coffee_id":  1,
+				"method_id":  2,
+				"grinder_id": 0,
+				"info": map[string]any{
+					"name":     "Test Name",
+					"grams_in": 20,
+					"ml_out":   320,
+					"phases": []map[string]any{
+						{
+							"open":   true,
+							"time":   45,
+							"amount": 160,
+						},
+						{
+							"open":   false,
+							"time":   75,
+							"amount": 160,
+						},
+						{
+							"open":   true,
+							"time":   60,
+							"amount": 0,
+						},
+					},
+				},
+			},
+			expectedStatusCode: http.StatusNotFound,
+			expectedResponse:   nil,
+			expectedError: map[string]any{
+				"error": "the requested grinder could not be found",
 			},
 		},
 		{
@@ -308,6 +356,7 @@ func TestCreateRecipe(t *testing.T) {
 				assert.NotEmpty(t, recipe["coffee"].(map[string]any)["id"])
 				assert.Equal(t, tt.expectedResponse["method"].(map[string]any)["name"], recipe["method"].(map[string]any)["name"])
 				assert.NotEmpty(t, recipe["method"].(map[string]any)["id"])
+				assert.NotEmpty(t, recipe["grinder"].(map[string]any)["id"])
 			} else {
 				assert.Equal(t, tt.expectedError, body)
 			}
@@ -349,6 +398,11 @@ func TestListRecipes(t *testing.T) {
 	}
 	createCoffee(t, token, insertedCoffee, []byte(insertedCoffee.Info.Img))
 
+	insertedGrinder := data.Grinder{
+		Name: "Test Grinder",
+	}
+	_ = createGrinder(t, token, insertedGrinder)
+
 	recipeInfo := data.SwitchRecipeInfo{
 		Name:   "Test Recipe",
 		GramIn: 20,
@@ -366,9 +420,10 @@ func TestListRecipes(t *testing.T) {
 	}
 
 	insertedRecipe := data.Recipe{
-		CoffeeID: ptr(int64(1)),
-		MethodID: 2,
-		Info:     jsonBytes,
+		CoffeeID:  ptr(int64(1)),
+		MethodID:  2,
+		GrinderID: ptr(int64(1)),
+		Info:      jsonBytes,
 	}
 
 	// create a recipe
@@ -386,6 +441,7 @@ func TestListRecipes(t *testing.T) {
 			r := recipe.(map[string]any)
 			assert.NotEmpty(t, r["coffee"].(map[string]any)["id"])
 			assert.NotEmpty(t, r["method"].(map[string]any)["id"])
+			assert.NotEmpty(t, r["grinder"].(map[string]any)["id"])
 			assert.NotEmpty(t, r["info"].(map[string]any)["name"])
 		}
 	})

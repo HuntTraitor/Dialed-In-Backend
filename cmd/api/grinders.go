@@ -80,7 +80,9 @@ func (app *application) createGrinderHandler(w http.ResponseWriter, r *http.Requ
 	}
 
 	err = app.writeJSON(w, http.StatusOK, envelope{"grinder": grinder}, nil)
-
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }
 
 func (app *application) updateGrinderHandler(w http.ResponseWriter, r *http.Request) {
