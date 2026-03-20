@@ -4,20 +4,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"github.com/hunttraitor/dialed-in-backend/internal/s3"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
-	"net/http"
-	"time"
 )
 
 func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	user := app.contextGetUser(r)
 
 	var input struct {
-		MethodId int64           `json:"method_id"`
-		CoffeeId *int64          `json:"coffee_id,omitempty"`
-		Info     json.RawMessage `json:"info"`
+		MethodId  int64           `json:"method_id"`
+		CoffeeId  *int64          `json:"coffee_id,omitempty"`
+		GrinderId *int64          `json:"grinder_id,omitempty"`
+		Info      json.RawMessage `json:"info"`
 	}
 
 	err := app.readJSON(w, r, &input)
@@ -27,10 +29,11 @@ func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	recipe := &data.Recipe{
-		UserID:   user.ID,
-		MethodID: input.MethodId,
-		CoffeeID: input.CoffeeId,
-		Info:     input.Info,
+		UserID:    user.ID,
+		MethodID:  input.MethodId,
+		CoffeeID:  input.CoffeeId,
+		GrinderID: input.GrinderId,
+		Info:      input.Info,
 	}
 
 	method, err := app.models.Methods.GetOne(recipe.MethodID)
@@ -80,6 +83,20 @@ func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
+	var grinder *data.Grinder
+	if recipe.GrinderID != nil {
+		grinder, err = app.models.Grinders.GetOne(*recipe.GrinderID, user.ID)
+		if err != nil {
+			switch {
+			case errors.Is(err, data.ErrRecordNotFound):
+				app.unknownGrinderResponse(w, r)
+			default:
+				app.serverErrorResponse(w, r, err)
+			}
+			return
+		}
+	}
+
 	err = app.models.Recipes.Insert(recipe)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
@@ -91,6 +108,7 @@ func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Reque
 		UserID:    recipe.UserID,
 		Method:    *method,
 		Coffee:    coffee,
+		Grinder:   grinder,
 		Info:      recipe.Info,
 		CreatedAt: recipe.CreatedAt,
 		Version:   recipe.Version,
@@ -153,11 +171,26 @@ func (app *application) listRecipesHandler(w http.ResponseWriter, r *http.Reques
 			}
 		}
 
+		var grinder *data.Grinder
+		if recipe.GrinderID != nil {
+			grinder, err = app.models.Grinders.GetOne(*recipe.GrinderID, user.ID)
+			if err != nil {
+				switch {
+				case errors.Is(err, data.ErrRecordNotFound):
+					app.unknownGrinderResponse(w, r)
+				default:
+					app.serverErrorResponse(w, r, err)
+				}
+				return
+			}
+		}
+
 		fullRecipe := &data.FullRecipe{
 			ID:        recipe.ID,
 			UserID:    recipe.UserID,
 			Method:    *method,
 			Coffee:    coffee,
+			Grinder:   grinder,
 			Info:      recipe.Info,
 			CreatedAt: recipe.CreatedAt,
 			Version:   recipe.Version,
@@ -185,7 +218,7 @@ func (app *application) updateRecipeHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-			app.unknownCoffeeResponse(w, r)
+			app.unknownRecipeResponse(w, r)
 		default:
 			fmt.Println(err)
 			app.serverErrorResponse(w, r, err)
@@ -194,9 +227,10 @@ func (app *application) updateRecipeHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	var input struct {
-		MethodID *int64           `json:"method_id"`
-		CoffeeID NullInt64        `json:"coffee_id"`
-		Info     *json.RawMessage `json:"info"`
+		MethodID  *int64           `json:"method_id"`
+		CoffeeID  NullInt64        `json:"coffee_id"`
+		GrinderID NullInt64        `json:"grinder_id"`
+		Info      *json.RawMessage `json:"info"`
 	}
 
 	err = app.readJSON(w, r, &input)
@@ -211,6 +245,10 @@ func (app *application) updateRecipeHandler(w http.ResponseWriter, r *http.Reque
 
 	if input.CoffeeID.Present {
 		recipe.CoffeeID = input.CoffeeID.Value
+	}
+
+	if input.GrinderID.Present {
+		recipe.GrinderID = input.GrinderID.Value
 	}
 
 	if input.Info != nil {
@@ -253,6 +291,19 @@ func (app *application) updateRecipeHandler(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
+	var grinder *data.Grinder
+	if recipe.GrinderID != nil {
+		grinder, err = app.models.Grinders.GetOne(*recipe.GrinderID, user.ID)
+		if err != nil {
+			switch {
+			case errors.Is(err, data.ErrRecordNotFound):
+				app.unknownGrinderResponse(w, r)
+			default:
+				app.serverErrorResponse(w, r, err)
+			}
+		}
+	}
+
 	v := validator.New()
 	if data.ValidateRecipe(v, recipe); !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
@@ -275,6 +326,7 @@ func (app *application) updateRecipeHandler(w http.ResponseWriter, r *http.Reque
 		UserID:    recipe.UserID,
 		Method:    *method,
 		Coffee:    coffee,
+		Grinder:   grinder,
 		Info:      recipe.Info,
 		CreatedAt: recipe.CreatedAt,
 		Version:   recipe.Version,
@@ -298,7 +350,7 @@ func (app *application) deleteRecipeHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-			app.unknownCoffeeResponse(w, r)
+			app.unknownRecipeResponse(w, r)
 		default:
 			app.serverErrorResponse(w, r, err)
 		}

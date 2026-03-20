@@ -94,3 +94,13 @@ func (app *application) unknownMethodResponse(w http.ResponseWriter, r *http.Req
 	message := "the requested method could not be found"
 	app.errorResponse(w, r, http.StatusNotFound, message)
 }
+
+func (app *application) unknownGrinderResponse(w http.ResponseWriter, r *http.Request) {
+	message := "the requested grinder could not be found"
+	app.errorResponse(w, r, http.StatusNotFound, message)
+}
+
+func (app *application) unknownRecipeResponse(w http.ResponseWriter, r *http.Request) {
+	message := "the requested recipe could not be found"
+	app.errorResponse(w, r, http.StatusNotFound, message)
+}
