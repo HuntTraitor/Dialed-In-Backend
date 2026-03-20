@@ -5,10 +5,11 @@ import "github.com/hunttraitor/dialed-in-backend/internal/data"
 // NewMockModels returns models that are meant for mocking
 func NewMockModels() data.Models {
 	return data.Models{
-		Users:   MockUserModel{},
-		Tokens:  &MockTokenModel{},
-		Methods: &MockMethodModel{},
-		Coffees: &MockCoffeeModel{},
-		Recipes: &MockRecipeModel{},
+		Users:    MockUserModel{},
+		Tokens:   &MockTokenModel{},
+		Methods:  &MockMethodModel{},
+		Coffees:  &MockCoffeeModel{},
+		Recipes:  &MockRecipeModel{},
+		Grinders: &MockGrinderModel{},
 	}
 }

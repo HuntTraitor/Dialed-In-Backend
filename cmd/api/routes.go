@@ -2,8 +2,9 @@ package main
 
 import (
 	"expvar"
-	"github.com/go-chi/chi/v5"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func (app *application) routes() http.Handler {
@@ -37,6 +38,9 @@ func (app *application) routes() http.Handler {
 
 	// Recipe Routes
 	router.Route("/v1/recipes", app.loadRecipeRoutes)
+
+	// Grinder Routes
+	router.Route("/v1/grinders", app.loadGrinderRoutes)
 
 	router.Route("/debug", app.loadDebugRoutes)
 
@@ -83,4 +87,10 @@ func (app *application) loadRecipeRoutes(router chi.Router) {
 	router.With(app.requireAuthenticatedUser).Get("/", app.listRecipesHandler)
 	router.With(app.requireAuthenticatedUser).Patch("/{id}", app.updateRecipeHandler)
 	router.With(app.requireAuthenticatedUser).Delete("/{id}", app.deleteRecipeHandler)
+}
+
+func (app *application) loadGrinderRoutes(router chi.Router) {
+	router.With(app.requireAuthenticatedUser).Get("/", app.listGrindersHandler)
+	router.With(app.requireAuthenticatedUser).Post("/", app.createGrinderHandler)
+	router.With(app.requireAuthenticatedUser).Get("/{id}", app.getGrinderHandler)
 }

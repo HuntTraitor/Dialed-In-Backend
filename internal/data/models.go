@@ -11,20 +11,22 @@ var (
 )
 
 type Models struct {
-	Users   UserModelInterface
-	Tokens  TokenModelInterface
-	Methods MethodModelInterface
-	Coffees CoffeeModelInterface
-	Recipes RecipeModelInterface
+	Users    UserModelInterface
+	Tokens   TokenModelInterface
+	Methods  MethodModelInterface
+	Coffees  CoffeeModelInterface
+	Recipes  RecipeModelInterface
+	Grinders GrinderModelInterface
 }
 
 // NewModels returns models associated with a real database
 func NewModels(db *sql.DB) Models {
 	return Models{
-		Users:   UserModel{DB: db},
-		Tokens:  TokenModel{DB: db},
-		Methods: MethodModel{DB: db},
-		Coffees: CoffeeModel{DB: db},
-		Recipes: RecipeModel{DB: db},
+		Users:    UserModel{DB: db},
+		Tokens:   TokenModel{DB: db},
+		Methods:  MethodModel{DB: db},
+		Coffees:  CoffeeModel{DB: db},
+		Recipes:  RecipeModel{DB: db},
+		Grinders: GrinderModel{DB: db},
 	}
 }

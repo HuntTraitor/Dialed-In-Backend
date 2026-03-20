@@ -21,6 +21,13 @@ CREATE TABLE IF NOT EXISTS methods (
     name text NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS grinders (
+    id bigserial PRIMARY KEY,
+    name text NOT NULL,
+    version int NOT NULL DEFAULT 1,
+    created_at timestamp(0) with time zone NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS coffees (
     id bigserial PRIMARY KEY,
     user_id bigint NOT NULL REFERENCES users ON DELETE CASCADE,
@@ -34,6 +41,7 @@ CREATE TABLE IF NOT EXISTS recipes (
     user_id bigint NOT NULL REFERENCES users ON DELETE CASCADE,
     coffee_id bigint REFERENCES coffees ON DELETE CASCADE,
     method_id bigint NOT NULL REFERENCES methods ON DELETE CASCADE,
+    grinder_id bigint REFERENCES grinders(id) ON DELETE SET NULL,
     info jsonb,
     version int NOT NULL DEFAULT 1,
     created_at timestamp(0) with time zone NOT NULL DEFAULT NOW()
@@ -45,31 +53,3 @@ INSERT INTO users (name, email, password_hash, activated) VALUES
 INSERT INTO methods (name) VALUES
                                     ('V60'),
                                     ('Hario Switch');
-
--- INSERT INTO recipes(user_id, coffee_id, method_id, info) VALUES
---     (
---         (SELECT id FROM users WHERE email = 'hunter@gmail.com'),
---         (SELECT id FROM coffees WHERE name = 'Milky Cake'),
---         (SELECT id FROM methods WHERE name = 'Hario Switch'),
---         json_build_object(
---                 'grams_in', '20',
---                 'grams_out', '320',
---                 'phase', json_build_object(
---                         '1', json_build_object(
---                         'open', 'true',
---                         'time', '45',
---                         'amount', '160'
---                              ),
---                         '2', json_build_object(
---                                 'open', 'false',
---                                 'time', '75',
---                                 'amount', '160'
---                              ),
---                         '3', json_build_object(
---                                 'open', 'true',
---                                 'time', '60',
---                                 'amount', '0'
---                              )
---                          )
---         )
---     );
