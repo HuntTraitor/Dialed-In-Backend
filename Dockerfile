@@ -18,6 +18,7 @@ RUN apk add --no-cache make gcc libc-dev git
 RUN go install -mod=mod github.com/githubnemo/CompileDaemon
 RUN go get -v golang.org/x/tools/gopls
 RUN go install github.com/pressly/goose/v3/cmd/goose@latest
+RUN go install gotest.tools/gotestsum@latest
 COPY Makefile .
 
 ENV PATH=$PATH:/root/go/bin

@@ -49,10 +49,14 @@ up:
 reset:
 	@docker compose exec -T app goose -dir=db/migrations postgres "$(MIGRATION_URL)" reset
 
-## test-all: runs all unit tests sequentially
+## test-all: runs all unit tests sequentially with gotestdox output
 .PHONY: test-all
 test-all:
-	@docker compose exec -T app go test -v -p=1 -count=1 -buildvcs=false ./...
+	docker compose exec app gotestsum \
+		--format testdox \
+		--format-icons unicode \
+		--hide-summary=skipped \
+		-- -p=1 -count=1 -timeout=60s -buildvcs=false ./...
 
 ## test-api: runs all API endpoint tests against a mock database
 .PHONY: test-api
@@ -68,6 +72,43 @@ test-internal:
 .PHONY: test-e2e
 test-e2e:
 	@docker compose exec -T app go test -v -buildvcs=false ./e2e/...
+
+## test-one: run one top-level test or one exact subtest path
+##
+## 	examples:
+##   		make test-one TEST="TestPostCoffee2" PKG=./e2e
+##   		make test-one TEST="TestPostCoffee2/coffee origin type too long" PKG=./e2e
+##
+.PHONY: test-one
+test-one:
+	@test -n "$(TEST)" || (echo 'usage: make test-one TEST="TestName or TestName/subtest words" [PKG=./path]'; exit 1)
+	@INPUT='$(TEST)'; \
+	case "$$INPUT" in \
+		Test*/*) \
+			PARENT=$$(printf '%s' "$$INPUT" | cut -d/ -f1); \
+			CHILD=$$(printf '%s' "$$INPUT" | cut -d/ -f2-); \
+			PARENT_ESCAPED=$$(printf '%s' "$$PARENT" | sed 's/[][(){}.^$$*+?|\\-]/\\&/g'); \
+			CHILD_REGEX=$$(printf '%s' "$$CHILD" \
+				| sed 's/[][(){}.^$$*+?|\\-]/\\&/g' \
+				| tr '[:upper:]' '[:lower:]' \
+				| sed 's/[[:space:]]\\+/.*/g'); \
+			RUN_PATTERN="^$$PARENT_ESCAPED$$/(?i)$$CHILD_REGEX"; \
+			;; \
+		Test*) \
+			PARENT_ESCAPED=$$(printf '%s' "$$INPUT" | sed 's/[][(){}.^$$*+?|\\-]/\\&/g'); \
+			RUN_PATTERN="^$$PARENT_ESCAPED$$"; \
+			;; \
+		*) \
+			echo 'error: use TEST="ParentTest/subtest words" for subtests'; \
+			exit 1; \
+			;; \
+	esac; \
+	echo "Running pattern: $$RUN_PATTERN"; \
+	docker compose exec app gotestsum \
+		--format testdox \
+		--format-icons unicode \
+		--hide-summary=skipped \
+		-- -p=1 -count=1 -timeout=60s -buildvcs=false -run "$$RUN_PATTERN" $(if $(PKG),$(PKG),./...)
 
 ## docker-up: runs the docker container
 .PHONY: docker-up

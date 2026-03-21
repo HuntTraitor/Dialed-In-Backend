@@ -3,17 +3,19 @@ package e2e
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
 	"os"
 	"testing"
 
+	"github.com/hunttraitor/dialed-in-backend/e2e/testutils"
+	"github.com/stretchr/testify/assert"
+
 	_ "github.com/lib/pq"
 )
 
 func TestHealthcheck(t *testing.T) {
-	cleanup, _, err := LaunchTestProgram(port)
+	cleanup, _, err := testutils.LaunchTestProgram(port)
 	if err != nil {
 		t.Fatalf("failed to launch test program: %v", err)
 	}

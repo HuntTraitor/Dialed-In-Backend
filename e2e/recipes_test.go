@@ -7,12 +7,13 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/hunttraitor/dialed-in-backend/e2e/testutils"
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateRecipe(t *testing.T) {
-	cleanup, _, err := LaunchTestProgram(port)
+	cleanup, _, err := testutils.LaunchTestProgram(port)
 	if err != nil {
 		t.Fatalf("failed to launch test program: %v", err)
 	}
@@ -377,7 +378,7 @@ func TestCreateRecipe(t *testing.T) {
 
 // TODO TestListRecipes
 func TestListRecipes(t *testing.T) {
-	cleanup, _, err := LaunchTestProgram(port)
+	cleanup, _, err := testutils.LaunchTestProgram(port)
 	if err != nil {
 		t.Fatalf("failed to launch test program: %v", err)
 	}

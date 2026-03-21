@@ -2,14 +2,16 @@ package e2e
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/hunttraitor/dialed-in-backend/e2e/testutils"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAuthenticateUser(t *testing.T) {
-	cleanup, _, err := LaunchTestProgram(port)
+	cleanup, _, err := testutils.LaunchTestProgram(port)
 	if err != nil {
 		t.Fatalf("failed to launch test program: %v", err)
 	}

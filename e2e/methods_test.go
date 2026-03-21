@@ -2,14 +2,16 @@ package e2e
 
 import (
 	"fmt"
-	"github.com/hunttraitor/dialed-in-backend/internal/data"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
+
+	"github.com/hunttraitor/dialed-in-backend/e2e/testutils"
+	"github.com/hunttraitor/dialed-in-backend/internal/data"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetAllMethods(t *testing.T) {
-	cleanup, _, err := LaunchTestProgram(port)
+	cleanup, _, err := testutils.LaunchTestProgram(port)
 	if err != nil {
 		t.Fatalf("failed to launch test program: %v", err)
 	}
@@ -52,7 +54,7 @@ func TestGetAllMethods(t *testing.T) {
 }
 
 func TestGetOneMethod(t *testing.T) {
-	cleanup, _, err := LaunchTestProgram(port)
+	cleanup, _, err := testutils.LaunchTestProgram(port)
 	if err != nil {
 		t.Fatalf("failed to launch test program: %v", err)
 	}
