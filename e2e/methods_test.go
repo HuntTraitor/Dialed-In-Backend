@@ -5,101 +5,110 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/gavv/httpexpect"
 	"github.com/hunttraitor/dialed-in-backend/e2e/testutils"
-	"github.com/hunttraitor/dialed-in-backend/internal/data"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestGetAllMethods(t *testing.T) {
-	cleanup, _, err := testutils.LaunchTestProgram(port)
-	if err != nil {
-		t.Fatalf("failed to launch test program: %v", err)
-	}
-	t.Cleanup(cleanup)
+	app := testutils.NewTestApp(t)
 
-	tests := []struct {
-		name               string
-		expectedStatusCode int
-		expectedMethods    []data.Method
-	}{
-		{
-			name:               "Successfully gets methods",
-			expectedStatusCode: http.StatusOK,
-			expectedMethods: []data.Method{
-				{
-					ID:        1,
-					Name:      "V60",
-					CreatedAt: "2025-01-25 00:28:23 +00:00",
-				},
-				{
-					ID:        2,
-					Name:      "Hario Switch",
-					CreatedAt: "2025-01-25 00:28:23 +00:00",
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			requestURL := fmt.Sprintf("http://localhost:%d/v1/methods", 3001)
-			statusCode, _, returnedBody := get(t, requestURL, nil)
-			assert.Equal(t, tt.expectedStatusCode, statusCode)
-			methods := returnedBody["methods"].([]any)
-			for i, item := range methods {
-				method := item.(map[string]any)
-				assert.Equal(t, tt.expectedMethods[i].Name, method["name"])
-			}
-		})
-	}
+	t.Run("Successfully gets all methods", func(t *testing.T) {
+		res := app.Client("").GET("/v1/methods").Expect(t)
+
+		obj := res.JSON().Object().Value("methods").Array()
+
+		obj.NotEmpty()
+		for i := 0; i < len(obj.Iter()); i++ {
+			m := obj.Element(i).Object()
+			m.Value("id").Number().Gt(0)
+			m.Value("name").String().NotEmpty()
+			m.Value("created_at").String().NotEmpty()
+		}
+	})
 }
 
 func TestGetOneMethod(t *testing.T) {
-	cleanup, _, err := testutils.LaunchTestProgram(port)
-	if err != nil {
-		t.Fatalf("failed to launch test program: %v", err)
-	}
-	t.Cleanup(cleanup)
 
-	mockMethod := data.Method{
-		ID:   1,
-		Name: "V60",
-	}
+	app := testutils.NewTestApp(t)
+
+	t.Run("Successfully gets one method", func(t *testing.T) {
+		res := app.Client("").GET("/v1/methods").Expect(t)
+
+		obj := res.JSON().Object().Value("methods").Array()
+		obj.NotEmpty()
+		for i := 0; i < len(obj.Iter()); i++ {
+			m := obj.Element(i).Object()
+
+			t.Log(m.Value("id").Number().Raw())
+
+			id := int64(m.Value("id").Number().Raw())
+
+			one := app.Client("").
+				GET(fmt.Sprintf("/v1/methods/%d", id)).
+				Expect(t).
+				JSON().Object().Value("method").
+				Object()
+
+			one.Value("id").Number().Equal(m.Value("id").Number().Raw())
+			one.Value("name").String().Equal(m.Value("name").String().Raw())
+			s := m.Value("created_at").String().Raw()
+			one.Value("created_at").String().Equal(s)
+		}
+	})
+
+	t.Run("Method not found", func(t *testing.T) {
+		app.Client("").GET("/v1/methods/0").Expect(t).Status(http.StatusNotFound)
+	})
+}
+
+func TestMethodExists(t *testing.T) {
+	app := testutils.NewTestApp(t)
 
 	tests := []struct {
-		name               string
-		expectedStatusCode int
-		expectedMethod     data.Method
-		expectedError      map[string]any
+		name   string
+		method string
+		assert func(*httpexpect.Object)
 	}{
 		{
-			name:               "Successfully gets method",
-			expectedStatusCode: http.StatusOK,
-			expectedMethod:     mockMethod,
-			expectedError:      nil,
+			name:   "Hario Switch",
+			method: "Hario Switch",
+			assert: func(method *httpexpect.Object) {
+				method.Value("name").String().Equal("Hario Switch")
+			},
 		},
 		{
-			name:               "Method not found",
-			expectedStatusCode: http.StatusNotFound,
-			expectedMethod: data.Method{
-				ID: 0,
-			},
-			expectedError: map[string]any{
-				"error": "The requested resource could not be found.",
+			name:   "V60",
+			method: "V60",
+			assert: func(method *httpexpect.Object) {
+				method.Value("name").String().Equal("V60")
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			requestURL := fmt.Sprintf("http://localhost:%d/v1/methods/%d", 3001, tt.expectedMethod.ID)
-			statusCode, _, returnedBody := get(t, requestURL, nil)
-			assert.Equal(t, tt.expectedStatusCode, statusCode)
-			if tt.expectedError == nil {
-				returnedMethod := returnedBody["method"].(map[string]any)
-				assert.Equal(t, tt.expectedMethod.Name, returnedMethod["name"])
-			} else {
-				assert.Equal(t, tt.expectedError, returnedBody)
+
+			res := app.Client("").GET("/v1/methods").Expect(t)
+
+			obj := res.JSON().Object().Value("methods").Array()
+			obj.NotEmpty()
+
+			var method *httpexpect.Object
+
+			for _, v := range obj.Iter() {
+				m := v.Object()
+
+				if m.Value("name").String().Raw() == tt.method {
+					method = m
+					break
+				}
 			}
+
+			if method == nil {
+				t.Fatalf("Method %s not found", tt.method)
+			}
+
+			tt.assert(method)
 		})
 	}
 }

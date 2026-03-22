@@ -52,12 +52,21 @@ type CreateGrinderResponse struct {
 }
 
 type Method struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	CreatedAt string `json:"created_at"`
 }
 
 type ListMethodsResponse struct {
 	Methods []Method `json:"methods"`
+}
+
+type HealthCheckResponse struct {
+	Status     string `json:"status"`
+	SystemInfo struct {
+		Environment string `json:"environment"`
+		Version     string `json:"version"`
+	} `json:"system_info"`
 }
 
 func (f *FixtureFactory) CreateUser(t *testing.T) FixtureUser {
@@ -135,27 +144,6 @@ func (f *FixtureFactory) CreateGrinder(t *testing.T, token string, name string) 
 
 	require.NotZero(t, body.Grinder.ID)
 	return body
-}
-
-func (f *FixtureFactory) GetMethodByName(t *testing.T, token string, name string) Method {
-	t.Helper()
-
-	res := (&APIClient{BaseURL: f.BaseURL, Token: token}).
-		GET(fmt.Sprintf("/v1/methods?name=%s", name)).Expect(t)
-
-	res.Status(http.StatusOK)
-
-	var body ListMethodsResponse
-	DecodeJSON(t, res, &body)
-
-	for _, method := range body.Methods {
-		if method.Name == name {
-			return method
-		}
-	}
-
-	t.Fatalf("method %s not found", name)
-	return Method{}
 }
 
 func uniqueEmail() string {
