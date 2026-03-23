@@ -15,13 +15,29 @@ type CreateUserResponse struct {
 	} `json:"user"`
 }
 
-func (f *FixtureFactory) CreateUser(t *testing.T) FixtureUser {
-	t.Helper()
+type CreateUserInput struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
 
-	user := FixtureUser{
+func ValidUser() CreateUserInput {
+	return CreateUserInput{
 		Name:     "Test User",
 		Email:    uniqueEmail(),
 		Password: "password123",
+	}
+}
+
+func (f *FixtureFactory) CreateUser(t *testing.T) FixtureUser {
+	t.Helper()
+
+	validUser := ValidUser()
+
+	user := FixtureUser{
+		Name:     validUser.Name,
+		Email:    validUser.Email,
+		Password: validUser.Password,
 	}
 
 	res := (&APIClient{BaseURL: f.BaseURL}).

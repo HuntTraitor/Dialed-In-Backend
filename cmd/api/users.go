@@ -30,14 +30,18 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		Activated: false,
 	}
 
+	v := validator.New()
+	data.ValidatePasswordPlainText(v, input.Password)
+
 	// Set the password to the hash
-	err = user.Password.Set(input.Password)
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
+	if v.Valid() {
+		err = user.Password.Set(input.Password)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+		}
 	}
 
 	// Validate the user input and return any errors
-	v := validator.New()
 	if data.ValidateUser(v, user); !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return

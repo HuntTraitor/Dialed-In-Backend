@@ -1,5 +1,14 @@
 package e2e
 
+import (
+	"net/http"
+	"strings"
+	"testing"
+
+	"github.com/gavv/httpexpect"
+	"github.com/hunttraitor/dialed-in-backend/e2e/testutils"
+)
+
 //
 //import (
 //	"fmt"
@@ -367,4 +376,116 @@ package e2e
 //	})
 //}
 
-// testing creating a user will send an email...
+// Creating a new user will send a 201 and send an email
+// Creating a new user without any fields rejects
+// Creating a new user with a bad email rejects
+// Creating a new user with a short password rejects
+// Creating a new user with a too long password rejects
+// Creating a new user with a too long name rejects
+// Creating a new user with a duplicate email rejects
+
+func TestCreateUser(t *testing.T) {
+	app := testutils.NewTestApp(t)
+
+	tests := []struct {
+		name   string
+		mutate func(*testutils.CreateUserInput)
+		assert func(*testing.T, *httpexpect.Response, testutils.CreateUserInput)
+	}{
+		{
+			name:   "Creating a new user will send a 201 and send an email",
+			mutate: func(input *testutils.CreateUserInput) {},
+			assert: func(t *testing.T, res *httpexpect.Response, input testutils.CreateUserInput) {
+				user := res.Status(http.StatusCreated).JSON().Object().Value("user").Object()
+
+				user.Value("id").Number().Gt(0)
+				user.Value("created_at").String().NotEmpty()
+				user.Value("name").String().Equal(input.Name)
+				user.Value("email").String().Equal(input.Email)
+				user.Value("activated").Boolean().False()
+
+				testutils.AssertEmailSent(t, "to", user.Value("email").String().Raw())
+			},
+		},
+		{
+			name: "Creating a new user without any fields returns a bad input",
+			mutate: func(input *testutils.CreateUserInput) {
+				input.Name = ""
+				input.Email = ""
+				input.Password = ""
+			},
+			assert: func(t *testing.T, res *httpexpect.Response, input testutils.CreateUserInput) {
+				err := res.Status(http.StatusUnprocessableEntity).JSON().Object().Value("error").Object()
+				err.Value("email").String().NotEmpty()
+				err.Value("name").String().NotEmpty()
+				err.Value("password").String().NotEmpty()
+			},
+		},
+		{
+			name: "Creating a new user with a bad email returns a bad input",
+			mutate: func(input *testutils.CreateUserInput) {
+				input.Email = "testexample.com"
+			},
+			assert: func(t *testing.T, res *httpexpect.Response, input testutils.CreateUserInput) {
+				err := res.Status(http.StatusUnprocessableEntity).JSON().Object().Value("error").Object()
+				err.Value("email").String().NotEmpty()
+			},
+		},
+		{
+			name: "Creating a new user with a short password returns a bad input",
+			mutate: func(input *testutils.CreateUserInput) {
+				input.Password = "1234567"
+			},
+			assert: func(t *testing.T, res *httpexpect.Response, input testutils.CreateUserInput) {
+				err := res.Status(http.StatusUnprocessableEntity).JSON().Object().Value("error").Object()
+				err.Value("password").String().Contains("8")
+			},
+		},
+		{
+			name: "Creating a new user with a too long password returns a bad input",
+			mutate: func(input *testutils.CreateUserInput) {
+				input.Password = strings.Repeat("a", 73)
+			},
+			assert: func(t *testing.T, res *httpexpect.Response, input testutils.CreateUserInput) {
+				t.Log(input)
+				err := res.Status(http.StatusUnprocessableEntity).JSON().Object().Value("error").Object()
+				err.Value("password").String().Contains("72")
+			},
+		},
+		{
+			name: "Creating a new user with a too long name returns a bad input",
+			mutate: func(input *testutils.CreateUserInput) {
+				input.Name = strings.Repeat("a", 501)
+			},
+			assert: func(t *testing.T, res *httpexpect.Response, input testutils.CreateUserInput) {
+				err := res.Status(http.StatusUnprocessableEntity).JSON().Object().Value("error").Object()
+				err.Value("name").String().Contains("500")
+			},
+		},
+		{
+			name:   "Creating a new user with a duplicate email address returns a status conflict",
+			mutate: func(input *testutils.CreateUserInput) {},
+			assert: func(t *testing.T, res *httpexpect.Response, input testutils.CreateUserInput) {
+				user := res.Status(http.StatusCreated).JSON().Object().Value("user").Object()
+				newUser := testutils.CreateUserInput{
+					Name:     input.Name,
+					Email:    user.Value("email").String().Raw(),
+					Password: input.Password,
+				}
+				err := app.Client("").POSTJSON("/v1/users", newUser).Expect(t).Status(http.StatusUnprocessableEntity).
+					JSON().Object().Value("error").Object()
+
+				err.Value("email").String().Contains("exists")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input := testutils.ValidUser()
+			tt.mutate(&input)
+			res := app.Client("").POSTJSON("/v1/users", input).Expect(t)
+			tt.assert(t, res, input)
+		})
+	}
+}
