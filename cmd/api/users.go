@@ -2,10 +2,11 @@ package main
 
 import (
 	"errors"
-	"github.com/hunttraitor/dialed-in-backend/internal/data"
-	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"net/http"
 	"time"
+
+	"github.com/hunttraitor/dialed-in-backend/internal/data"
+	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 )
 
 func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Request) {

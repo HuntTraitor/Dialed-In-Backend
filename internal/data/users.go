@@ -5,9 +5,11 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"errors"
+	"fmt"
+	"time"
+
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"golang.org/x/crypto/bcrypt"
-	"time"
 )
 
 var (
@@ -192,6 +194,8 @@ func (m UserModel) Update(user *User) error {
 // GetForToken gets a user by their associated token
 func (m UserModel) GetForToken(tokenScope, tokenPlainText string) (*User, error) {
 	tokenHash := sha256.Sum256([]byte(tokenPlainText))
+	fmt.Println(tokenPlainText)
+	fmt.Printf("%x", tokenHash[:])
 
 	query := `
 		SELECT users.id, users.created_at, users.name, users.email, users.password_hash, users.activated, users.version

@@ -2,10 +2,12 @@ package main
 
 import (
 	"errors"
-	"github.com/hunttraitor/dialed-in-backend/internal/data"
-	"github.com/hunttraitor/dialed-in-backend/internal/validator"
+	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/hunttraitor/dialed-in-backend/internal/data"
+	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 )
 
 func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, r *http.Request) {
@@ -34,7 +36,7 @@ func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, 
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-			app.notFoundResponse(w, r)
+			app.invalidCredentialsResponse(w, r)
 		default:
 			app.serverErrorResponse(w, r, err)
 		}
@@ -85,8 +87,15 @@ func (app *application) createPasswordResetTokenHandler(w http.ResponseWriter, r
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
-			v.AddError("email", "no matching email address found")
-			app.failedValidationResponse(w, r, v.Errors)
+			app.logger.Error(fmt.Sprintf(
+				"User with email %s is not associated with this service",
+				input.Email,
+			))
+			env := envelope{"message": "If an account exists for that email, a reset link has been sent."}
+			err = app.writeJSON(w, http.StatusCreated, env, nil)
+			if err != nil {
+				app.serverErrorResponse(w, r, err)
+			}
 		default:
 			app.serverErrorResponse(w, r, err)
 		}
@@ -111,7 +120,7 @@ func (app *application) createPasswordResetTokenHandler(w http.ResponseWriter, r
 		}
 	})
 
-	env := envelope{"message": "an email will be sent to you containing password reset instructions"}
+	env := envelope{"message": "If an account exists for that email, a reset link has been sent."}
 
 	err = app.writeJSON(w, http.StatusCreated, env, nil)
 	if err != nil {

@@ -1,88 +1,152 @@
 package e2e
 
 import (
-	"fmt"
 	"net/http"
-	"strings"
 	"testing"
 
+	"github.com/gavv/httpexpect"
 	"github.com/hunttraitor/dialed-in-backend/e2e/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestAuthenticateUser(t *testing.T) {
-	cleanup, _, err := testutils.LaunchTestProgram(port)
-	if err != nil {
-		t.Fatalf("failed to launch test program: %v", err)
-	}
-	t.Cleanup(cleanup)
-	_ = createUser(t)
-
-	//t.Run("Unactivated user cannot log in", func(t *testing.T) {
-	//	payload := `{"email": "test@example.com", "password": "password"}`
-	//	requestURL := fmt.Sprintf("http://localhost:%d/v1/tokens/authentication", 3001)
-	//	statusCode, _, body := post(t, requestURL, strings.NewReader(payload))
-	//	assert.Equal(t, http.StatusUnauthorized, statusCode)
-	//	assert.Equal(t, "your user account must be verified to login, please verify your account by checking your email", body["error"])
-	//})
+	app := testutils.NewTestApp(t)
 
 	tests := []struct {
-		name               string
-		payload            string
-		expectedStatusCode int
-		expectedWrapper    string
-		expectedResponse   map[string]any
+		name   string
+		mutate func(request *testutils.AuthRequest)
+		assert func(*httpexpect.Response)
 	}{
 		{
-			name:               "Successfully authenticates user",
-			payload:            `{"email": "test@example.com", "password": "password"}`,
-			expectedStatusCode: http.StatusCreated,
-			expectedWrapper:    "authentication_token",
-		},
-		{
-			name:               "Incorrect email returns error",
-			payload:            `{"email": "notfound@example.com", "password": "password"}`,
-			expectedStatusCode: http.StatusNotFound,
-			expectedWrapper:    "",
-			expectedResponse: map[string]any{
-				"error": "The requested resource could not be found.",
+			name:   "Successfully authenticates user",
+			mutate: func(request *testutils.AuthRequest) {},
+			assert: func(res *httpexpect.Response) {
+				auth := res.Status(http.StatusCreated).JSON().Object().Value("authentication_token").Object()
+				auth.Value("token").String().NotEmpty()
+				auth.Value("expiry").String().NotEmpty()
 			},
 		},
 		{
-			name:               "Incorrect password returns error",
-			payload:            `{"email": "test@example.com", "password": "incorrect"}`,
-			expectedStatusCode: http.StatusUnauthorized,
-			expectedWrapper:    "",
-			expectedResponse: map[string]any{
-				"error": "invalid authentication credentials",
+			name: "Incorrect email returns an error",
+			mutate: func(request *testutils.AuthRequest) {
+				request.Email = "invalid@example.com"
+			},
+			assert: func(res *httpexpect.Response) {
+				res.Status(http.StatusUnauthorized).JSON().Object().Value("error").String().NotEmpty()
+			},
+		},
+		{
+			name: "Incorrect password returns an error",
+			mutate: func(request *testutils.AuthRequest) {
+				request.Password = "invalid123123"
+			},
+			assert: func(res *httpexpect.Response) {
+				res.Status(http.StatusUnauthorized).JSON().Object().Value("error").String().NotEmpty()
+			},
+		},
+		{
+			name: "Password is too short returns an error",
+			mutate: func(request *testutils.AuthRequest) {
+				request.Password = "123"
+			},
+			assert: func(res *httpexpect.Response) {
+				pwd := res.Status(http.StatusUnprocessableEntity).JSON().Object().Value("error").Object()
+				pwd.Value("password").String().NotEmpty()
+			},
+		},
+		{
+			name: "Bad email returns an error",
+			mutate: func(request *testutils.AuthRequest) {
+				request.Email = "invalid"
+			},
+			assert: func(res *httpexpect.Response) {
+				email := res.Status(http.StatusUnprocessableEntity).JSON().Object().Value("error").Object()
+				email.Value("email").String().NotEmpty()
+			},
+		},
+		{
+			name: "Missing email and password returns an error",
+			mutate: func(request *testutils.AuthRequest) {
+				request.Email = ""
+				request.Password = ""
+			},
+			assert: func(res *httpexpect.Response) {
+				err := res.Status(http.StatusUnprocessableEntity).JSON().Object().Value("error").Object()
+				err.Value("email").String().NotEmpty()
+				err.Value("password").String().NotEmpty()
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
-			//TODO recomment this when activate user is turned on
-			//var token string
-			//waitFor(t, func() bool {
-			//	body, _ := getEmail(t, "containing", "token")
-			//	token = extractToken(t, body)
-			//	return token != ""
-			//})
-			//
-			//// activate the user
-			//_ = activateUser(t, token)
-
-			requestURL := fmt.Sprintf("http://localhost:%d/v1/tokens/authentication", 3001)
-			statusCode, _, body := post(t, requestURL, strings.NewReader(tt.payload), nil)
-			assert.Equal(t, tt.expectedStatusCode, statusCode)
-			if tt.expectedWrapper == "authentication_token" {
-				actualContent := body[tt.expectedWrapper].(map[string]any)
-				assert.NotEmpty(t, actualContent["token"])
-				assert.NotEmpty(t, actualContent["expiry"])
-			} else {
-				assert.Equal(t, tt.expectedResponse["error"], body["error"])
+			user := app.Factory.CreateUser(t)
+			authRequest := testutils.AuthRequest{
+				Email:    user.Email,
+				Password: user.Password,
 			}
+			tt.mutate(&authRequest)
+
+			res := app.Client("").POSTJSON("/v1/tokens/authentication", authRequest).Expect(t)
+			tt.assert(res)
+		})
+	}
+}
+
+// successfully recieves password reset email
+// bad email doesnt recieve password reset email
+// email not existing still gets same response  but doesnt send email
+
+func TestResetPasswordEmailSent(t *testing.T) {
+	app := testutils.NewTestApp(t)
+
+	user := app.Factory.CreateUser(t)
+
+	tests := []struct {
+		name   string
+		mutate func(request *testutils.PasswordResetRequest)
+		assert func(*testing.T, *httpexpect.Response)
+	}{
+		{
+			name:   "Successfully sends password reset email",
+			mutate: func(request *testutils.PasswordResetRequest) {},
+			assert: func(t *testing.T, res *httpexpect.Response) {
+				res.Status(http.StatusCreated).JSON().Object().Value("message").String().Contains("sent")
+
+				token := testutils.AssertPasswordResetToken(t, user.Email)
+				assert.NotEmpty(t, token)
+			},
+		},
+		{
+			name: "Invalid email doesnt receive password reset email",
+			mutate: func(request *testutils.PasswordResetRequest) {
+				request.Email = "invalidexample.com"
+			},
+			assert: func(t *testing.T, res *httpexpect.Response) {
+				err := res.Status(http.StatusUnprocessableEntity).JSON().Object().Value("error").Object()
+				err.Value("email").String().NotEmpty()
+			},
+		},
+		{
+			name: "Email not existing receives json but doesnt send email",
+			mutate: func(request *testutils.PasswordResetRequest) {
+				request.Email = "nonexistent@noexist.com"
+			},
+			assert: func(t *testing.T, res *httpexpect.Response) {
+				res.Status(http.StatusCreated).JSON().Object().Value("message").String().Contains("sent")
+				testutils.AssertNoPasswordResetToken(t, "nonexistent@noexist.com")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			request := testutils.PasswordResetRequest{
+				Email: user.Email,
+			}
+			tt.mutate(&request)
+			res := app.Client("").POSTJSON("/v1/tokens/password-reset", request).Expect(t)
+			tt.assert(t, res)
 		})
 	}
 }

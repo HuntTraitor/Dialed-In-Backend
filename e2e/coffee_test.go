@@ -62,6 +62,65 @@ func TestGetAllCoffees(t *testing.T) {
 	})
 }
 
+func TestGetOneCoffee(t *testing.T) {
+	app := testutils.NewTestApp(t)
+
+	t.Run("Getting successful coffee returns 200", func(t *testing.T) {
+		user := app.Factory.CreateUser(t)
+		token := app.Factory.Login(t, user.Email, user.Password)
+		coffee := app.Factory.CreateCoffee(t, token, testutils.ValidCoffeeForm())
+		res := app.Client(token).GET(fmt.Sprintf("/v1/coffees/%d", coffee.Coffee.ID)).
+			Expect(t).Status(http.StatusOK)
+
+		c := res.JSON().Object().Value("coffee").Object()
+		c.Value("id").Number().Equal(coffee.Coffee.ID)
+		c.Value("user_id").Number().Equal(user.ID)
+		c.Value("created_at").String().NotEmpty()
+		c.Value("version").Number().Equal(1)
+
+		info := c.Value("info").Object()
+		info.Value("name").String().Equal(testutils.ValidCoffeeForm().Name)
+		info.Value("roaster").String().Equal(testutils.ValidCoffeeForm().Roaster)
+		info.Value("region").String().Equal(testutils.ValidCoffeeForm().Region)
+		info.Value("process").String().Equal(testutils.ValidCoffeeForm().Process)
+		info.Value("description").String().Equal(testutils.ValidCoffeeForm().Description)
+		info.Value("origin_type").String().Equal(testutils.ValidCoffeeForm().OriginType)
+		info.Value("rating").Number().Equal(testutils.ValidCoffeeForm().Rating)
+		info.Value("cost").Number().Equal(testutils.ValidCoffeeForm().Cost)
+		info.Value("roast_level").String().Equal(testutils.ValidCoffeeForm().RoastLevel)
+		info.Value("decaf").Boolean().Equal(testutils.ValidCoffeeForm().Decaf)
+		info.Value("variety").String().Equal(testutils.ValidCoffeeForm().Variety)
+		notes := info.Value("tasting_notes").Array().Raw()
+		actualNotes := make([]string, len(notes))
+		for j, note := range notes {
+			actualNotes[j] = note.(string)
+		}
+		assert.ElementsMatch(t, testutils.ValidCoffeeForm().TastingNotes, actualNotes)
+	})
+
+	t.Run("Getting coffee that doesn't exist returns 404", func(t *testing.T) {
+		user := app.Factory.CreateUser(t)
+		token := app.Factory.Login(t, user.Email, user.Password)
+		app.Client(token).GET("/v1/coffees/0").Expect(t).Status(http.StatusNotFound)
+	})
+
+	t.Run("Getting coffee that doesn't belong to user returns 404", func(t *testing.T) {
+		user := app.Factory.CreateUser(t)
+		token := app.Factory.Login(t, user.Email, user.Password)
+
+		user2 := app.Factory.CreateUser(t)
+		token2 := app.Factory.Login(t, user2.Email, user2.Password)
+
+		coffee := app.Factory.CreateCoffee(t, token, testutils.ValidCoffeeForm())
+		app.Client(token).GET(fmt.Sprintf("/v1/coffees/%d", coffee.Coffee.ID)).Expect(t).Status(http.StatusOK)
+		app.Client(token2).GET(fmt.Sprintf("/v1/coffees/%d", coffee.Coffee.ID)).Expect(t).Status(http.StatusNotFound)
+	})
+
+	t.Run("Getting coffee unauthenticated is a 403", func(t *testing.T) {
+		app.Client("").GET(fmt.Sprintf("/v1/coffees/%d", 1)).Expect(t).Status(http.StatusUnauthorized)
+	})
+}
+
 func TestPostCoffee(t *testing.T) {
 	app := testutils.NewTestApp(t)
 	user := app.Factory.CreateUser(t)

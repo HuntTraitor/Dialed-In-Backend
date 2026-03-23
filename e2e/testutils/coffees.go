@@ -1,5 +1,12 @@
 package testutils
 
+import (
+	"net/http"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
 type CoffeeForm struct {
 	Name         string
 	Roaster      string
@@ -14,6 +21,12 @@ type CoffeeForm struct {
 	Decaf        bool
 	Img          []byte
 	Variety      string
+}
+
+type CreateCoffeeResponse struct {
+	Coffee struct {
+		ID int64 `json:"id"`
+	} `json:"coffee"`
 }
 
 func ValidCoffeeForm() CoffeeForm {
@@ -42,4 +55,19 @@ func MinimalCoffeeForm(name string) CoffeeForm {
 
 func EmptyCoffeeForm() CoffeeForm {
 	return CoffeeForm{}
+}
+
+func (f *FixtureFactory) CreateCoffee(t *testing.T, token string, form CoffeeForm) CreateCoffeeResponse {
+	t.Helper()
+
+	res := (&APIClient{BaseURL: f.BaseURL, Token: token}).
+		POSTMultipart("/v1/coffees", form).Expect(t)
+
+	res.Status(http.StatusCreated)
+
+	var body CreateCoffeeResponse
+	DecodeJSON(t, res, &body)
+
+	require.NotZero(t, body.Coffee.ID)
+	return body
 }
