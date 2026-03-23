@@ -9,76 +9,6 @@ import (
 	"github.com/hunttraitor/dialed-in-backend/e2e/testutils"
 )
 
-//func TestResetPassword(t *testing.T) {
-//	cleanup, _, err := testutils.LaunchTestProgram(port)
-//	if err != nil {
-//		t.Fatalf("failed to launch test program: %v", err)
-//	}
-//	t.Cleanup(cleanup)
-//
-//	_ = createUser(t)
-//
-//	t.Run("Succesfully Resets Password", func(t *testing.T) {
-//
-//		// Check that you can log in with the old password
-//		requestURL := fmt.Sprintf("http://localhost:%d/v1/tokens/authentication", 3001)
-//		requestBody := `{"email": "test@example.com", "password": "password"}`
-//		statusCode, _, _ := post(t, requestURL, strings.NewReader(requestBody), nil)
-//		assert.Equal(t, http.StatusCreated, statusCode)
-//
-//		// Send the request to reset
-//		requestURL = fmt.Sprintf("http://localhost:%d/v1/tokens/password-reset", 3001)
-//		requestBody = `{"email": "test@example.com"}`
-//
-//		statusCode, _, returnedBody := post(t, requestURL, strings.NewReader(requestBody), nil)
-//		expectedResponse := map[string]any{
-//			"message": "an email will be sent to you containing password reset instructions",
-//		}
-//
-//		assert.Equal(t, http.StatusCreated, statusCode)
-//		assert.Equal(t, expectedResponse, returnedBody)
-//
-//		// Get the reset token from the email
-//		var token string
-//		waitFor(t, func() bool {
-//			body, _ := getEmail(t, "containing", "password%20reset%20token")
-//			token = extractToken(t, body)
-//			return token != ""
-//		})
-//
-//		// Send a request to the reset password
-//		requestURL = fmt.Sprintf("http://localhost:%d/v1/users/password", 3001)
-//		requestBody = fmt.Sprintf(`{"password": "password2", "token": "%s"}`, token)
-//
-//		statusCode, _, returnedBody = put(t, requestURL, strings.NewReader(requestBody))
-//		assert.Equal(t, http.StatusOK, statusCode)
-//		expectedResponse = map[string]any{
-//			"message": "your password was successfully reset",
-//		}
-//		assert.Equal(t, expectedResponse, returnedBody)
-//
-//		// Check that you cannot log in with the old password
-//		requestURL = fmt.Sprintf("http://localhost:%d/v1/tokens/authentication", 3001)
-//		requestBody = `{"email": "test@example.com", "password": "password"}`
-//		statusCode, _, _ = post(t, requestURL, strings.NewReader(requestBody), nil)
-//		assert.Equal(t, http.StatusUnauthorized, statusCode)
-//
-//		//Check that you can log in with the new password
-//		requestURL = fmt.Sprintf("http://localhost:%d/v1/tokens/authentication", 3001)
-//		requestBody = `{"email": "test@example.com", "password": "password2"}`
-//		statusCode, _, _ = post(t, requestURL, strings.NewReader(requestBody), nil)
-//		assert.Equal(t, http.StatusCreated, statusCode)
-//	})
-//}
-
-// Creating a new user will send a 201 and send an email
-// Creating a new user without any fields rejects
-// Creating a new user with a bad email rejects
-// Creating a new user with a short password rejects
-// Creating a new user with a too long password rejects
-// Creating a new user with a too long name rejects
-// Creating a new user with a duplicate email rejects
-
 func TestCreateUser(t *testing.T) {
 	app := testutils.NewTestApp(t)
 
@@ -228,4 +158,106 @@ func TestVerifyUser(t *testing.T) {
 		})
 	}
 
+}
+
+func TestResetPassword(t *testing.T) {
+	app := testutils.NewTestApp(t)
+
+	tests := []struct {
+		name   string
+		mutate func(*testutils.PasswordResetRequest)
+		assert func(*testing.T, *httpexpect.Response, testutils.FixtureUser, string)
+	}{
+		{
+			name:   "Successfully resets password",
+			mutate: func(request *testutils.PasswordResetRequest) {},
+			assert: func(t *testing.T, res *httpexpect.Response, user testutils.FixtureUser, newPassword string) {
+				res.Status(http.StatusOK).JSON().Object().Value("message").String().Contains("reset")
+
+				// expect the old password to be rejected
+				loginWithOldPassword := app.Client("").POSTJSON("/v1/tokens/authentication", testutils.AuthRequest{
+					Email:    user.Email,
+					Password: user.Password,
+				})
+				loginWithOldPassword.Expect(t).Status(http.StatusUnauthorized)
+
+				// expect the new password to be accepted
+				loginWithNewPassword := app.Client("").POSTJSON("/v1/tokens/authentication", testutils.AuthRequest{
+					Email:    user.Email,
+					Password: newPassword,
+				})
+				loginWithNewPassword.Expect(t).Status(http.StatusCreated)
+			},
+		},
+		{
+			name: "Empty body returns errors",
+			mutate: func(request *testutils.PasswordResetRequest) {
+				request.Token = ""
+				request.Password = ""
+			},
+			assert: func(t *testing.T, res *httpexpect.Response, user testutils.FixtureUser, newPassword string) {
+				err := res.Status(http.StatusUnprocessableEntity).JSON().Object().Value("error").Object()
+				err.Value("token").String().NotEmpty()
+				err.Value("password").String().NotEmpty()
+			},
+		},
+		{
+			name: "Too long password gets rejected",
+			mutate: func(request *testutils.PasswordResetRequest) {
+				request.Password = strings.Repeat("a", 73)
+			},
+			assert: func(t *testing.T, res *httpexpect.Response, user testutils.FixtureUser, newPassword string) {
+				err := res.Status(http.StatusUnprocessableEntity).JSON().Object().Value("error").Object()
+				err.Value("password").String().Contains("72")
+			},
+		},
+		{
+			name: "Too short password gets rejected",
+			mutate: func(request *testutils.PasswordResetRequest) {
+				request.Password = "1234567"
+			},
+			assert: func(t *testing.T, res *httpexpect.Response, user testutils.FixtureUser, newPassword string) {
+				err := res.Status(http.StatusUnprocessableEntity).JSON().Object().Value("error").Object()
+				err.Value("password").String().Contains("8")
+			},
+		},
+		{
+			name: "Incorrect token gets rejected",
+			mutate: func(request *testutils.PasswordResetRequest) {
+				request.Token = "000000"
+			},
+			assert: func(t *testing.T, res *httpexpect.Response, user testutils.FixtureUser, newPassword string) {
+				err := res.Status(http.StatusUnprocessableEntity).JSON().Object().Value("error").Object()
+				err.Value("token").String().Contains("invalid")
+			},
+		},
+		{
+			name: "Invalid token format gets rejected",
+			mutate: func(request *testutils.PasswordResetRequest) {
+				request.Token = "0"
+			},
+			assert: func(t *testing.T, res *httpexpect.Response, user testutils.FixtureUser, newPassword string) {
+				err := res.Status(http.StatusUnprocessableEntity).JSON().Object().Value("error").Object()
+				err.Value("token").String().Contains("6")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			user := app.Factory.CreateUser(t)
+
+			app.Factory.SendResetPasswordEmail(t, user.Email)
+			token := testutils.AssertPasswordResetToken(t, user.Email)
+
+			req := testutils.PasswordResetRequest{
+				Token:    token,
+				Password: testutils.ValidPassword(),
+			}
+
+			tt.mutate(&req)
+			res := app.Client("").PUTJSON("/v1/users/password", req).Expect(t)
+			tt.assert(t, res, user, req.Password)
+		})
+	}
 }

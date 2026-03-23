@@ -41,6 +41,10 @@ func (c *APIClient) PATCHMultipart(path string, form CoffeeForm) *RequestBuilder
 	return &RequestBuilder{client: c, method: "PATCH", path: path, form: &form}
 }
 
+func (c *APIClient) PUTJSON(path string, body any) *RequestBuilder {
+	return &RequestBuilder{client: c, method: "PUT", path: path, json: body}
+}
+
 func (c *APIClient) PATCHMultipartWithExtraFields(path string, form CoffeeForm, extraFields map[string]string) *RequestBuilder {
 	return &RequestBuilder{
 		client:      c,
@@ -77,6 +81,8 @@ func (r *RequestBuilder) Expect(t *testing.T) *httpexpect.Response {
 		req = e.POST(r.path)
 	case "PATCH":
 		req = e.PATCH(r.path)
+	case "PUT":
+		req = e.PUT(r.path)
 	default:
 		t.Fatalf("unsupported method: %s", r.method)
 		return nil

@@ -104,12 +104,12 @@ func TestResetPasswordEmailSent(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		mutate func(request *testutils.PasswordResetRequest)
+		mutate func(request *testutils.PasswordResetEmailRequest)
 		assert func(*testing.T, *httpexpect.Response)
 	}{
 		{
 			name:   "Successfully sends password reset email",
-			mutate: func(request *testutils.PasswordResetRequest) {},
+			mutate: func(request *testutils.PasswordResetEmailRequest) {},
 			assert: func(t *testing.T, res *httpexpect.Response) {
 				res.Status(http.StatusCreated).JSON().Object().Value("message").String().Contains("sent")
 
@@ -119,7 +119,7 @@ func TestResetPasswordEmailSent(t *testing.T) {
 		},
 		{
 			name: "Invalid email doesnt receive password reset email",
-			mutate: func(request *testutils.PasswordResetRequest) {
+			mutate: func(request *testutils.PasswordResetEmailRequest) {
 				request.Email = "invalidexample.com"
 			},
 			assert: func(t *testing.T, res *httpexpect.Response) {
@@ -129,7 +129,7 @@ func TestResetPasswordEmailSent(t *testing.T) {
 		},
 		{
 			name: "Email not existing receives json but doesnt send email",
-			mutate: func(request *testutils.PasswordResetRequest) {
+			mutate: func(request *testutils.PasswordResetEmailRequest) {
 				request.Email = "nonexistent@noexist.com"
 			},
 			assert: func(t *testing.T, res *httpexpect.Response) {
@@ -141,7 +141,7 @@ func TestResetPasswordEmailSent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			request := testutils.PasswordResetRequest{
+			request := testutils.PasswordResetEmailRequest{
 				Email: user.Email,
 			}
 			tt.mutate(&request)

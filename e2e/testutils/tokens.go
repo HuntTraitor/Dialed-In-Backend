@@ -19,8 +19,17 @@ type AuthResponse struct {
 	} `json:"authentication_token"`
 }
 
-type PasswordResetRequest struct {
+type PasswordResetEmailRequest struct {
 	Email string `json:"email"`
+}
+
+type PasswordResetRequest struct {
+	Token    string `json:"token"`
+	Password string `json:"password"`
+}
+
+func ValidPassword() string {
+	return "newPassword123!"
 }
 
 func (f *FixtureFactory) Login(t *testing.T, email, password string) string {
@@ -39,4 +48,14 @@ func (f *FixtureFactory) Login(t *testing.T, email, password string) string {
 
 	require.NotEmpty(t, body.AuthenticationToken.Token)
 	return body.AuthenticationToken.Token
+}
+
+func (f *FixtureFactory) SendResetPasswordEmail(t *testing.T, email string) {
+	t.Helper()
+	res := (&APIClient{BaseURL: f.BaseURL}).
+		POSTJSON("/v1/tokens/password-reset", PasswordResetEmailRequest{
+			Email: email,
+		}).Expect(t)
+
+	res.Status(http.StatusCreated)
 }
