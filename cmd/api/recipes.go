@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -220,7 +219,6 @@ func (app *application) updateRecipeHandler(w http.ResponseWriter, r *http.Reque
 		case errors.Is(err, data.ErrRecordNotFound):
 			app.unknownRecipeResponse(w, r)
 		default:
-			fmt.Println(err)
 			app.serverErrorResponse(w, r, err)
 		}
 		return
