@@ -9,8 +9,11 @@ import (
 
 type CreateGrinderResponse struct {
 	Grinder struct {
-		ID   int64  `json:"id"`
-		Name string `json:"name"`
+		ID        int64  `json:"id"`
+		UserId    int64  `json:"user_id"`
+		CreatedAt string `json:"created_at"`
+		Name      string `json:"name"`
+		Version   int64  `json:"version"`
 	} `json:"grinder"`
 }
 
@@ -24,16 +27,16 @@ func ValidGrinder() CreateGrinderRequest {
 	}
 }
 
-func (f *FixtureFactory) CreateGrinder(t *testing.T, token string, name string) CreateGrinderResponse {
+func (f *FixtureFactory) CreateGrinder(t *testing.T, token string, name string) FixtureGrinder {
 	t.Helper()
 
-	if name == "" {
-		name = "Test Grinder"
+	grinder := FixtureGrinder{
+		Name: name,
 	}
 
 	res := (&APIClient{BaseURL: f.BaseURL, Token: token}).
 		POSTJSON("/v1/grinders", map[string]any{
-			"name": name,
+			"name": grinder.Name,
 		}).Expect(t)
 
 	res.Status(http.StatusCreated)
@@ -41,5 +44,10 @@ func (f *FixtureFactory) CreateGrinder(t *testing.T, token string, name string) 
 	DecodeJSON(t, res, &body)
 
 	require.NotZero(t, body.Grinder.ID)
-	return body
+	grinder.ID = body.Grinder.ID
+	grinder.Name = body.Grinder.Name
+	grinder.CreatedAt = body.Grinder.CreatedAt
+	grinder.Version = body.Grinder.Version
+	grinder.UserID = body.Grinder.UserId
+	return grinder
 }

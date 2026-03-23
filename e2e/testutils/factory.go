@@ -10,3 +10,11 @@ type FixtureUser struct {
 	Email    string
 	Password string
 }
+
+type FixtureGrinder struct {
+	ID        int64
+	UserID    int64
+	Name      string
+	CreatedAt string
+	Version   int64
+}
