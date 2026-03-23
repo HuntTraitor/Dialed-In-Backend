@@ -82,7 +82,7 @@ func TestGetAllGrinders(t *testing.T) {
 
 		// post 2 grinders
 		for i := 0; i < 3; i++ {
-			app.Factory.CreateGrinder(t, token, testutils.ValidGrinder().Name)
+			app.Factory.CreateGrinder(t, token, testutils.ValidGrinder())
 		}
 
 		res := app.Client(token).GET("/v1/grinders").Expect(t)
@@ -147,7 +147,7 @@ func TestGetOneGrinder(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			grinder := app.Factory.CreateGrinder(t, token, tt.name)
+			grinder := app.Factory.CreateGrinder(t, token, testutils.ValidGrinder())
 			tt.mutate(&grinder.ID)
 			res := app.Client(token).GET(fmt.Sprintf("/v1/grinders/%d", grinder.ID)).Expect(t)
 			tt.assert(res, grinder)
@@ -159,11 +159,94 @@ func TestGetOneGrinder(t *testing.T) {
 	})
 
 	t.Run("Grinder that is unowned returns a 404", func(t *testing.T) {
-		grinder := app.Factory.CreateGrinder(t, token, testutils.ValidGrinder().Name)
+		grinder := app.Factory.CreateGrinder(t, token, testutils.ValidGrinder())
 		newUser := app.Factory.CreateUser(t)
 		newToken := app.Factory.Login(t, newUser.Email, newUser.Password)
 
 		app.Client(newToken).GET(fmt.Sprintf("/v1/grinders/%d", grinder.ID)).Expect(t).Status(http.StatusNotFound)
 	})
 
+}
+
+func TestPatchGrinder(t *testing.T) {
+	app := testutils.NewTestApp(t)
+	user := app.Factory.CreateUser(t)
+	token := app.Factory.Login(t, user.Email, user.Password)
+
+	tests := []struct {
+		name   string
+		mutate func(*testutils.PatchGrinderRequest)
+		assert func(*httpexpect.Response, testutils.PatchGrinderRequest)
+	}{
+		{
+			name:   "Patching a grinder is successful",
+			mutate: func(req *testutils.PatchGrinderRequest) {},
+			assert: func(res *httpexpect.Response, input testutils.PatchGrinderRequest) {
+				grinder := res.Status(http.StatusOK).JSON().Object().Value("grinder").Object()
+				grinder.Value("id").Number().Gt(0)
+				grinder.Value("user_id").Number().Equal(user.ID)
+				grinder.Value("name").String().Equal(input.Name)
+				grinder.Value("created_at").String().NotEmpty()
+				grinder.Value("version").Number().Equal(2)
+
+				newGrinder := app.Client(token).GET(fmt.Sprintf("/v1/grinders/%d", int(grinder.Value("id").Number().Raw()))).
+					Expect(t).Status(http.StatusOK).JSON().Object().Value("grinder").Object()
+
+				newGrinder.Value("name").String().Equal(input.Name)
+			},
+		},
+		{
+			name: "Name too long returns an error",
+			mutate: func(req *testutils.PatchGrinderRequest) {
+				req.Name = strings.Repeat("a", 101)
+			},
+			assert: func(res *httpexpect.Response, input testutils.PatchGrinderRequest) {
+				err := res.Status(http.StatusUnprocessableEntity).JSON().Object().Value("error").Object()
+				err.Value("name").String().Contains("100")
+			},
+		},
+		{
+			name: "No body returns an error",
+			mutate: func(req *testutils.PatchGrinderRequest) {
+				req.Name = ""
+			},
+			assert: func(res *httpexpect.Response, input testutils.PatchGrinderRequest) {
+				err := res.Status(http.StatusUnprocessableEntity).JSON().Object().Value("error").Object()
+				err.Value("name").String().NotEmpty()
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			grinder := app.Factory.CreateGrinder(t, token, testutils.ValidGrinder())
+
+			req := testutils.ValidPatchGrinder()
+			tt.mutate(&req)
+			res := app.Client(token).PATCHJSON(fmt.Sprintf("/v1/grinders/%d", grinder.ID), req).Expect(t)
+			tt.assert(res, req)
+
+		})
+	}
+
+	t.Run("Patching a grinder that you dont own returns an error", func(t *testing.T) {
+
+		request := testutils.CreateGrinderRequest{
+			Name: testutils.ValidGrinder().Name,
+		}
+
+		grinder := app.Factory.CreateGrinder(t, token, request)
+		newUser := app.Factory.CreateUser(t)
+		newUserToken := app.Factory.Login(t, newUser.Email, newUser.Password)
+
+		app.Client(newUserToken).PATCHJSON(fmt.Sprintf("/v1/grinders/%d", grinder.ID), request).Expect(t).Status(http.StatusNotFound)
+	})
+
+	t.Run("Patching a grinder when not logged in returns an error", func(t *testing.T) {
+		request := testutils.CreateGrinderRequest{
+			Name: testutils.ValidGrinder().Name,
+		}
+		grinder := app.Factory.CreateGrinder(t, token, request)
+		app.Client("").PATCHJSON(fmt.Sprintf("/v1/grinders/%d", grinder.ID), request).Expect(t).Status(http.StatusUnauthorized)
+	})
 }

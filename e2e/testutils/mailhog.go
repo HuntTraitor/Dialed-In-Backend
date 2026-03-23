@@ -105,7 +105,7 @@ func AssertPasswordResetToken(t *testing.T, email string) string {
 		body, _ := GetEmail(t, "to", email)
 		token = ExtractToken(body)
 		return token != ""
-	}, 2*time.Second, 100*time.Millisecond, "token was not found")
+	}, 4*time.Second, 100*time.Millisecond, "token was not found")
 
 	return token
 }

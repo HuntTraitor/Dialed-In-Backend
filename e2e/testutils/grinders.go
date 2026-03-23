@@ -21,17 +21,37 @@ type CreateGrinderRequest struct {
 	Name string `json:"name"`
 }
 
+type PatchGrinderRequest struct {
+	Name string `json:"name"`
+}
+
+type PatchGrinderResponse struct {
+	Grinder struct {
+		ID        int64  `json:"id"`
+		UserId    int64  `json:"user_id"`
+		CreatedAt string `json:"created_at"`
+		Name      string `json:"name"`
+		Version   int64  `json:"version"`
+	} `json:"grinder"`
+}
+
 func ValidGrinder() CreateGrinderRequest {
 	return CreateGrinderRequest{
 		Name: "Test Grinder",
 	}
 }
 
-func (f *FixtureFactory) CreateGrinder(t *testing.T, token string, name string) FixtureGrinder {
+func ValidPatchGrinder() PatchGrinderRequest {
+	return PatchGrinderRequest{
+		Name: "Updated Grinder",
+	}
+}
+
+func (f *FixtureFactory) CreateGrinder(t *testing.T, token string, request CreateGrinderRequest) FixtureGrinder {
 	t.Helper()
 
 	grinder := FixtureGrinder{
-		Name: name,
+		Name: request.Name,
 	}
 
 	res := (&APIClient{BaseURL: f.BaseURL, Token: token}).
