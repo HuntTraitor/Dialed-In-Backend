@@ -14,6 +14,16 @@ type CreateGrinderResponse struct {
 	} `json:"grinder"`
 }
 
+type CreateGrinderRequest struct {
+	Name string `json:"name"`
+}
+
+func ValidGrinder() CreateGrinderRequest {
+	return CreateGrinderRequest{
+		Name: "Test Grinder",
+	}
+}
+
 func (f *FixtureFactory) CreateGrinder(t *testing.T, token string, name string) CreateGrinderResponse {
 	t.Helper()
 

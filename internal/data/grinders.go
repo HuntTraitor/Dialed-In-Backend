@@ -31,7 +31,7 @@ type GrinderModelInterface interface {
 
 func ValidateGrinder(v *validator.Validator, grinder *Grinder) {
 	v.Check(grinder.Name != "", "name", "must be provided")
-	v.Check(len(grinder.Name) <= 500, "name", "must not be more than 500 bytes long")
+	v.Check(len(grinder.Name) <= 100, "name", "must not be more than 100 bytes long")
 }
 
 func (m GrinderModel) GetOne(id int64, userId int64) (*Grinder, error) {
