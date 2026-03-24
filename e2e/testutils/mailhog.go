@@ -14,47 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type mailhogSearchResponse struct {
-	Count int              `json:"count"`
-	Items []mailhogMessage `json:"items"`
-}
-
-type mailhogMessage struct {
-	Content mailhogContent `json:"Content"`
-}
-
-type mailhogContent struct {
-	Body string `json:"Body"`
-}
-
-//// GetEmail returns the string version and amount of emails with a kind and query linked to
-//// and returns the body and number of emails
-//// https://github.com/mailhog/MailHog/blob/master/docs/APIv2/swagger-2.0.yaml
-//func GetEmail(t *testing.T, kind string, query string) (string, int) {
-//	t.Helper()
-//	requestURL := fmt.Sprintf("http://localhost:8025/api/v2/search?kind=%s&query=%s", kind, query)
-//	resp, err := http.Get(requestURL)
-//	if err != nil {
-//		t.Fatalf("failed to fetch messages from MailHog: %v", err)
-//	}
-//	defer resp.Body.Close()
-//
-//	body, err := io.ReadAll(resp.Body)
-//	if err != nil {
-//		t.Fatalf("failed to read response body: %v", err)
-//	}
-//
-//	var data map[string]any
-//	err = json.Unmarshal(body, &data)
-//	if err != nil {
-//		t.Fatalf("failed to unmarshal JSON: %v\n", err)
-//	}
-//
-//	count := int(data["count"].(float64))
-//
-//	return string(body), count
-//}
-
 func GetEmail(t *testing.T, kind, query string) (string, int) {
 	t.Helper()
 
@@ -71,15 +30,18 @@ func GetEmail(t *testing.T, kind, query string) (string, int) {
 	raw, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 
-	var data mailhogSearchResponse
+	var data map[string]any
 	err = json.Unmarshal(raw, &data)
 	require.NoError(t, err)
 
-	if len(data.Items) == 0 {
-		return "", 0
+	c, ok := data["count"].(float64)
+	if !ok {
+		require.Fail(t, "failed to parse 'count' as float64")
 	}
 
-	return data.Items[0].Content.Body, data.Count
+	count := int(c)
+
+	return string(raw), count
 }
 
 // ExtractToken takes an email body from mailhog and returns the token inside of that body
@@ -105,7 +67,7 @@ func AssertPasswordResetToken(t *testing.T, email string) string {
 		body, _ := GetEmail(t, "to", email)
 		token = ExtractToken(body)
 		return token != ""
-	}, 4*time.Second, 100*time.Millisecond, "token was not found")
+	}, 2*time.Second, 100*time.Millisecond, "token was not found")
 
 	return token
 }

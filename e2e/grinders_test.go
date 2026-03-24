@@ -10,11 +10,6 @@ import (
 	"github.com/hunttraitor/dialed-in-backend/e2e/testutils"
 )
 
-// POST grinder successful
-// POST grinder missing fields fails
-// POST grinder name too long fails
-
-// POST grinder not authenticated fails
 func TestPostGrinder(t *testing.T) {
 	app := testutils.NewTestApp(t)
 	user := app.Factory.CreateUser(t)
@@ -105,12 +100,6 @@ func TestGetAllGrinders(t *testing.T) {
 		app.Client("").GET("/v1/grinders").Expect(t).Status(http.StatusUnauthorized)
 	})
 }
-
-// test success
-// invalid ID returns not found
-
-// unauthenticated returns unauthorized
-// getting grinder you dont own causes 404
 
 func TestGetOneGrinder(t *testing.T) {
 	app := testutils.NewTestApp(t)
@@ -229,6 +218,13 @@ func TestPatchGrinder(t *testing.T) {
 		})
 	}
 
+	t.Run("Patching a grinder that does not exist returns an error", func(t *testing.T) {
+		request := testutils.CreateGrinderRequest{
+			Name: testutils.ValidGrinder().Name,
+		}
+		app.Client(token).PATCHJSON("/v1/grinders/0", request).Expect(t).Status(http.StatusNotFound)
+	})
+
 	t.Run("Patching a grinder that you dont own returns an error", func(t *testing.T) {
 
 		request := testutils.CreateGrinderRequest{
@@ -248,5 +244,56 @@ func TestPatchGrinder(t *testing.T) {
 		}
 		grinder := app.Factory.CreateGrinder(t, token, request)
 		app.Client("").PATCHJSON(fmt.Sprintf("/v1/grinders/%d", grinder.ID), request).Expect(t).Status(http.StatusUnauthorized)
+	})
+}
+
+func TestDeleteGrinder(t *testing.T) {
+	app := testutils.NewTestApp(t)
+	user := app.Factory.CreateUser(t)
+	token := app.Factory.Login(t, user.Email, user.Password)
+
+	tests := []struct {
+		name   string
+		mutate func(*int64)
+		assert func(*httpexpect.Response, testutils.FixtureGrinder)
+	}{
+		{
+			name:   "Successfully deletes a grinder",
+			mutate: func(id *int64) {},
+			assert: func(res *httpexpect.Response, input testutils.FixtureGrinder) {
+				res.Status(http.StatusOK).JSON().Object().Value("message").String().Contains("deleted")
+				app.Client(token).GET(fmt.Sprintf("/v1/grinders/%d", input.ID)).Expect(t).Status(http.StatusNotFound)
+			},
+		},
+		{
+			name: "Deleting a grinder that does not exist returns not found",
+			mutate: func(id *int64) {
+				*id = 0
+			},
+			assert: func(res *httpexpect.Response, input testutils.FixtureGrinder) {
+				res.Status(http.StatusNotFound).JSON().Object().Value("error").String().NotEmpty()
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			grinder := app.Factory.CreateGrinder(t, token, testutils.ValidGrinder())
+			tt.mutate(&grinder.ID)
+			res := app.Client(token).DELETE(fmt.Sprintf("/v1/grinders/%d", grinder.ID)).Expect(t)
+			tt.assert(res, grinder)
+		})
+	}
+
+	t.Run("Deleting a grinder that you dont own returns not found", func(t *testing.T) {
+		grinder := app.Factory.CreateGrinder(t, token, testutils.ValidGrinder())
+		newUser := app.Factory.CreateUser(t)
+		newToken := app.Factory.Login(t, newUser.Email, newUser.Password)
+		app.Client(newToken).DELETE(fmt.Sprintf("/v1/grinders/%d", grinder.ID)).Expect(t).Status(http.StatusNotFound)
+	})
+
+	t.Run("Deleting a grinder when not logged in returns unauthorized", func(t *testing.T) {
+		grinder := app.Factory.CreateGrinder(t, token, testutils.ValidGrinder())
+		app.Client("").DELETE(fmt.Sprintf("/v1/grinders/%d", grinder.ID)).Expect(t).Status(http.StatusUnauthorized)
 	})
 }

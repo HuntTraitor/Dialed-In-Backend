@@ -25,7 +25,6 @@ const (
 func LaunchTestProgram(port string) (cleanup func(), sendInterrupt func() error, err error) {
 
 	// Suppress output to reduce clutter in CI
-	suppressOutput()
 
 	err = godotenv.Load("../.env")
 	if err != nil {
@@ -196,17 +195,4 @@ func runSeeds(databaseURL string, seedsFilePath string) error {
 
 	log.Println("Seeding completed successfully.")
 	return nil
-}
-
-func suppressOutput() {
-	// Open /dev/null to suppress output
-	devNull, err := os.OpenFile("/dev/null", os.O_RDWR, 0666)
-	if err != nil {
-		panic(err)
-	}
-	os.Stdout = devNull
-	os.Stderr = devNull
-
-	// Suppress logging by replacing the default logger
-	log.SetOutput(devNull)
 }
