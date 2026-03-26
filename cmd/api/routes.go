@@ -2,7 +2,11 @@ package main
 
 import (
 	"expvar"
+	"io/fs"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"os"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -10,45 +14,61 @@ import (
 func (app *application) routes() http.Handler {
 	router := chi.NewRouter()
 
-	// if metrics are enabled
 	if app.config.metrics {
 		router.Use(app.metrics)
 	}
 
-	// Middleware
-	router.Use(app.recoverPanic, app.logRequest, app.rateLimit, app.authenticate)
+	// Global middleware
+	router.Use(app.recoverPanic, app.authenticate)
 
 	router.NotFound(app.notFoundResponse)
 	router.MethodNotAllowed(app.methodNotAllowedResponse)
 
-	// Health Check Routes
-	router.Route("/v1/healthcheck", app.loadHealthCheckRoutes)
+	// Frontend - no logging, no rate limit
+	if app.config.env == "development" {
+		router.Handle("/*", app.devProxyHandler())
+	} else {
+		subFS, err := fs.Sub(app.frontendFS, "dist")
+		if err != nil {
+			panic(err)
+		}
+		router.Handle("/*", app.spaHandler(http.FS(subFS)))
+	}
 
-	// User Routes
-	router.Route("/v1/users", app.loadUserRoutes)
+	// API routes - logged and rate limited
+	router.Group(func(r chi.Router) {
+		r.Use(app.logRequest, app.rateLimit)
 
-	// Token Routes
-	router.Route("/v1/tokens", app.loadTokenRoutes)
-
-	// Method Routes
-	router.Route("/v1/methods", app.loadMethodRoutes)
-
-	// Coffee Routes
-	router.Route("/v1/coffees", app.loadCoffeeRoutes)
-
-	// Recipe Routes
-	router.Route("/v1/recipes", app.loadRecipeRoutes)
-
-	// Grinder Routes
-	router.Route("/v1/grinders", app.loadGrinderRoutes)
-
-	router.Route("/debug", app.loadDebugRoutes)
+		r.Route("/v1/healthcheck", app.loadHealthCheckRoutes)
+		r.Route("/v1/users", app.loadUserRoutes)
+		r.Route("/v1/tokens", app.loadTokenRoutes)
+		r.Route("/v1/methods", app.loadMethodRoutes)
+		r.Route("/v1/coffees", app.loadCoffeeRoutes)
+		r.Route("/v1/recipes", app.loadRecipeRoutes)
+		r.Route("/v1/grinders", app.loadGrinderRoutes)
+		r.Route("/debug", app.loadDebugRoutes)
+	})
 
 	return router
 }
 
 func (app *application) loadHealthCheckRoutes(router chi.Router) {
 	router.Get("/", app.healthcheckHandler)
+}
+
+func (app *application) spaHandler(fsys http.FileSystem) http.HandlerFunc {
+	fileServer := http.FileServer(fsys)
+	return func(w http.ResponseWriter, r *http.Request) {
+		f, err := fsys.Open(r.URL.Path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				r.URL.Path = "/"
+			}
+		} else {
+			f.Close()
+		}
+		fileServer.ServeHTTP(w, r)
+	}
 }
 
 func (app *application) loadUserRoutes(router chi.Router) {
@@ -95,4 +115,12 @@ func (app *application) loadGrinderRoutes(router chi.Router) {
 	router.With(app.requireAuthenticatedUser).Get("/{id}", app.getGrinderHandler)
 	router.With(app.requireAuthenticatedUser).Patch("/{id}", app.updateGrinderHandler)
 	router.With(app.requireAuthenticatedUser).Delete("/{id}", app.deleteGrinderHandler)
+}
+
+func (app *application) devProxyHandler() http.HandlerFunc {
+	target, _ := url.Parse("http://frontend:5173") // your docker service name + vite port
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	return func(w http.ResponseWriter, r *http.Request) {
+		proxy.ServeHTTP(w, r)
+	}
 }

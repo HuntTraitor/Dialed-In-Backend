@@ -5,16 +5,17 @@ import (
 	"errors"
 	"expvar"
 	"fmt"
-	"github.com/hunttraitor/dialed-in-backend/internal/data"
-	"github.com/hunttraitor/dialed-in-backend/internal/validator"
-	"github.com/tomasen/realip"
-	"golang.org/x/time/rate"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/hunttraitor/dialed-in-backend/internal/data"
+	"github.com/hunttraitor/dialed-in-backend/internal/validator"
+	"github.com/tomasen/realip"
+	"golang.org/x/time/rate"
 )
 
 type wrappedResponseWriter struct {
@@ -76,6 +77,12 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 // logRequest logs the incoming request in the logger
 func (app *application) logRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		if strings.HasPrefix(r.URL.Path, "/assets/") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		rawBody, _ := io.ReadAll(r.Body)
 		r.Body = io.NopCloser(bytes.NewReader(rawBody))
 

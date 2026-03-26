@@ -3,23 +3,26 @@ package main
 import (
 	"context"
 	"database/sql"
+	"embed"
 	"expvar"
 	"flag"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	awsConfig "github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/hunttraitor/dialed-in-backend/internal/data"
-	"github.com/hunttraitor/dialed-in-backend/internal/mailer"
-	"github.com/hunttraitor/dialed-in-backend/internal/s3"
-	"github.com/hunttraitor/dialed-in-backend/internal/vcs"
 	"log/slog"
 	"os"
 	"runtime"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/hunttraitor/dialed-in-backend/frontend"
+	"github.com/hunttraitor/dialed-in-backend/internal/data"
+	"github.com/hunttraitor/dialed-in-backend/internal/mailer"
+	"github.com/hunttraitor/dialed-in-backend/internal/s3"
+	"github.com/hunttraitor/dialed-in-backend/internal/vcs"
 
 	_ "github.com/lib/pq"
 )
@@ -63,12 +66,13 @@ type config struct {
 }
 
 type application struct {
-	config config
-	logger *slog.Logger
-	models data.Models
-	mailer Mailer
-	wg     sync.WaitGroup
-	s3     *s3.S3
+	config     config
+	logger     *slog.Logger
+	models     data.Models
+	mailer     Mailer
+	wg         sync.WaitGroup
+	s3         *s3.S3
+	frontendFS embed.FS
 }
 
 type Mailer interface {
@@ -160,11 +164,12 @@ func main() {
 	logger.Info("AWS S3 Config has been established")
 
 	app := &application{
-		config: cfg,
-		logger: logger,
-		models: data.NewModels(db),
-		mailer: mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
-		s3:     NewS3(s3Config),
+		config:     cfg,
+		logger:     logger,
+		models:     data.NewModels(db),
+		mailer:     mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
+		s3:         NewS3(s3Config),
+		frontendFS: frontend.FS,
 	}
 
 	err = app.serve()

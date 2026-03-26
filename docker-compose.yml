@@ -53,3 +53,14 @@ services:
     ports:
       - '1025:1025'
       - '8025:8025'
+
+  frontend:
+    image: node:alpine
+    working_dir: /app/frontend
+    volumes:
+      - ./frontend:/app/frontend
+    command: sh -c "npm ci && npm run dev -- --host"
+    ports:
+      - "5173:5173"
+    depends_on:
+      - app
