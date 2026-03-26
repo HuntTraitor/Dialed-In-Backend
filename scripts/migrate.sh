@@ -15,4 +15,4 @@ DB_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${PG_IP}:5432/${POSTGRE
 echo "Running migrations with goose against ${DB_URL}"
 
 # 4. Run goose migrations
-goose -dir=../db/migrations postgres "${DB_URL}" up
+goose -dir=./db/migrations postgres "${DB_URL}" up
