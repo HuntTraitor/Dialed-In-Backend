@@ -58,6 +58,12 @@ jobs:
         source .env
         set +a
 
+    - name: Build frontend dist
+      run: |
+        cd frontend
+        npm ci
+        npm run build
+
     - name: Build Docker image
       run: docker compose --env-file .env build
 
