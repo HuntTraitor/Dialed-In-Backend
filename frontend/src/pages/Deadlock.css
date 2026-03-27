@@ -597,3 +597,134 @@
   color: #EDD07A;
 }
 .hm-reroll-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ══════════════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════════════ */
+
+/* ── Tablet / large mobile (≤ 700px) ── */
+@media (max-width: 700px) {
+  .dl-header  { padding: 24px 16px 0; }
+  .dl-tabs    { padding: 0 16px; }
+  .dl-content { padding: 20px 16px 80px; }
+
+  /* Tabs fill full width */
+  .dl-tabs    { gap: 8px; }
+  .dl-tab     { flex: 1; text-align: center; padding: 9px 12px; }
+
+  /* Game roll */
+  .gr-page    { min-height: unset; padding: 8px 0; }
+  .gr-inner   { gap: 20px; }
+  .gr-heading { gap: 12px; }
+  .gr-dice    { font-size: 1.5rem; }
+  .gr-title   { font-size: 1.2rem; }
+
+  /* Shrink drum to 4 visible rows */
+  .gr-drum-wrap { height: 288px; border-radius: 16px; }
+  .gr-drum-fade { height: 80px; }
+  .gr-drum-row  { font-size: 1.1rem; }
+  .gr-drum-row-active { font-size: 1.25rem; }
+
+  .gr-btn { padding: 14px 40px; font-size: 13px; }
+
+  .gr-result-name { font-size: 1.4rem; }
+  .gr-result-top  { padding: 18px 20px 14px; }
+  .gr-result-desc { padding: 14px 20px 18px; font-size: 14px; }
+
+  /* Hero grid: smaller min to fit more per row */
+  .dl-hero-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 7px; }
+  .dl-hero-name { font-size: 9px; padding: 4px 3px; }
+  .dl-random-face { font-size: 2.2rem; }
+}
+
+/* ── Small mobile (≤ 480px) ── */
+@media (max-width: 480px) {
+  .dl-hero-grid { grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap: 6px; }
+  .dl-hero-name { font-size: 8px; }
+  .dl-random-face { font-size: 1.8rem; }
+
+  /* Drum even more compact */
+  .gr-drum-wrap { height: 216px; } /* 3 rows */
+  .gr-drum-fade { height: 60px; }
+  .gr-drum-highlight { height: 72px; } /* keep row height same */
+  .gr-drum-row  { font-size: 1rem; }
+  .gr-drum-row-active { font-size: 1.15rem; }
+}
+
+/* ── Modal responsive ── */
+@media (max-width: 580px) {
+  .hm-backdrop { padding: 0; align-items: flex-end; }
+
+  .hm-modal {
+    grid-template-columns: 1fr;
+    max-width: 100%;
+    max-height: 92svh;
+    border-radius: 22px 22px 0 0;
+    /* Slide up from bottom on mobile */
+    animation: hm-slide-up 0.35s cubic-bezier(0.34,1.2,0.64,1) both;
+  }
+  @keyframes hm-slide-up {
+    from { opacity: 0; transform: translateY(60px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Left: portrait + info becomes a horizontal strip */
+  .hm-left {
+    border-right: none;
+    border-bottom: 1px solid #1A1D28;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0;
+    background: linear-gradient(to right, rgba(192,160,107,0.08) 0%, transparent 50%);
+  }
+
+  .hm-portrait {
+    width: 90px;
+    aspect-ratio: 280/380;
+    object-fit: cover;
+    flex-shrink: 0;
+    border-bottom: none;
+    border-right: 1px solid #1A1D28;
+  }
+
+  /* Name + drink stack beside portrait */
+  .hm-left > :not(.hm-portrait):not(.hm-hero-glow) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hm-hero-name {
+    padding: 10px 12px 4px;
+    text-align: left;
+    font-size: 13px;
+  }
+
+  .hm-drink {
+    padding: 0 12px 10px;
+    flex: 1;
+    align-items: flex-start;
+  }
+  .hm-drink-rule { font-size: 10px; }
+
+  /* Right: more compact */
+  .hm-right { padding: 16px 16px 20px; gap: 12px; }
+
+  .hm-stat-value  { font-size: 1.1rem; }
+  .hm-stat-big    { font-size: 1.6rem; }
+  .hm-stat        { padding: 10px 8px; }
+
+  .hm-item-row  { padding: 7px 10px; }
+  .hm-item-name { font-size: 12px; }
+  .hm-item-cat  { min-width: 44px; }
+
+  .hm-reroll-btn { padding: 11px; }
+}
+
+/* ── Very small (≤ 360px) ── */
+@media (max-width: 360px) {
+  .dl-hero-grid { grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 5px; }
+
+  .hm-portrait { width: 76px; }
+  .hm-right    { padding: 12px 12px 16px; gap: 10px; }
+  .hm-item-name { font-size: 11px; }
+}
