@@ -1,8 +1,9 @@
 package validator
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCheck(t *testing.T) {
@@ -129,4 +130,60 @@ func TestUrlRegex(t *testing.T) {
 			assert.Equal(t, tt.valid, Matches(tt.url, UrlRX))
 		})
 	}
+}
+
+func TestTemperatureRegex(t *testing.T) {
+	tests := []struct {
+		name        string
+		temperature string
+		valid       bool
+	}{
+		{
+			name:        "100 - Invalid",
+			temperature: "100",
+			valid:       false,
+		},
+		{
+			name:        "100°C - Valid",
+			temperature: "100°C",
+			valid:       true,
+		},
+		{
+			name:        "100°F - Valid",
+			temperature: "100°F",
+			valid:       true,
+		},
+		{
+			name:        "Empty - Invalid",
+			temperature: "",
+			valid:       false,
+		},
+		{
+			name:        "°F - Invalid",
+			temperature: "°F",
+			valid:       false,
+		},
+		{
+			name:        "°C - Invalid",
+			temperature: "°C",
+			valid:       false,
+		},
+		{
+			name:        "hi°C - invalid",
+			temperature: "hi°C",
+			valid:       false,
+		},
+		{
+			name:        "hi°F - invalid",
+			temperature: "hi°F",
+			valid:       false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.valid, Matches(tt.temperature, TempRX))
+		})
+	}
+
 }
