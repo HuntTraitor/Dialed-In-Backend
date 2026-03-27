@@ -76,7 +76,7 @@ function App() {
                       <circle cx="60" cy="60" r="50" className="timer-progress" />
                     </svg>
                     <div className="timer-inner">
-                      <span className="timer-time">2:30</span>
+                      <span className="timer-time">0:18</span>
                       <span className="timer-phase">Bloom</span>
                     </div>
                   </div>
@@ -84,33 +84,32 @@ function App() {
                 </div>
 
                 <div className="app-steps">
-                  <div className="app-step app-step-done">
-                    <div className="app-dot app-dot-done" />
-                    <div className="app-step-body">
-                      <span className="app-step-name">Pre-heat</span>
-                      <span className="app-step-meta">45g · 0:30</span>
-                    </div>
-                    <span className="app-check">✓</span>
-                  </div>
                   <div className="app-step app-step-active">
                     <div className="app-dot app-dot-active" />
                     <div className="app-step-body">
                       <span className="app-step-name">Bloom</span>
-                      <span className="app-step-meta">60g · 2:30</span>
+                      <span className="app-step-meta">60g · 0:30</span>
                     </div>
                   </div>
                   <div className="app-step">
                     <div className="app-dot" />
                     <div className="app-step-body">
-                      <span className="app-step-name">First Pour</span>
-                      <span className="app-step-meta">135g · 3:00</span>
+                      <span className="app-step-name">Second Pour</span>
+                      <span className="app-step-meta">60g · 0:30</span>
+                    </div>
+                  </div>
+                  <div className="app-step">
+                    <div className="app-dot" />
+                    <div className="app-step-body">
+                      <span className="app-step-name">Third Pour</span>
+                      <span className="app-step-meta">100g · 0:30</span>
                     </div>
                   </div>
                   <div className="app-step">
                     <div className="app-dot" />
                     <div className="app-step-body">
                       <span className="app-step-name">Final Pour</span>
-                      <span className="app-step-meta">80g · 4:30</span>
+                      <span className="app-step-meta">75g · 1:40</span>
                     </div>
                   </div>
                 </div>
@@ -150,7 +149,7 @@ function App() {
         <div className="stat-sep" />
         <div className="stat">
           <span className="stat-num">⚙️</span>
-          <span className="stat-label">Grinder Profiles</span>
+          <span className="stat-label">Grinders</span>
         </div>
         <div className="stat-sep" />
         <div className="stat">
@@ -212,12 +211,11 @@ function App() {
                   <path d="M24 6v6M24 36v6M6 24h6M36 24h6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
                 </svg>
               </div>
-              <h3>Grinder Profiles</h3>
-              <p>Save grinder settings for every coffee and brew method. Never forget the setting that gave you that perfect extraction.</p>
+              <h3>Grinders</h3>
+              <p>Add your grinders by name and attach a grind size to each recipe. Every brew has exactly the setting that made it great.</p>
               <div className="feature-chips">
-                <span className="chip">Settings</span>
-                <span className="chip">Burr type</span>
-                <span className="chip">Per-coffee</span>
+                <span className="chip">Grind size per recipe</span>
+                <span className="chip">Multiple grinders</span>
               </div>
             </div>
           </div>
@@ -229,7 +227,7 @@ function App() {
         <div className="section-wrap">
           <div className="section-header">
             <span className="section-badge">How it works</span>
-            <h2 className="section-title">From bean to cup, in four steps</h2>
+            <h2 className="section-title">From bean to cup, in five steps</h2>
             <p className="section-sub">An intentional flow designed around how great coffee actually gets made.</p>
           </div>
 
@@ -242,7 +240,7 @@ function App() {
               <div className="timeline-card">
                 <div className="timeline-icon">☕</div>
                 <h3>Add your coffee</h3>
-                <p>Log your beans with origin, roaster, roast date, and tasting notes. Build a library that grows with every bag you open.</p>
+                <p>Log your beans with origin, roaster, and roast date. Build a library that grows with every bag you open.</p>
               </div>
             </div>
 
@@ -253,8 +251,8 @@ function App() {
               </div>
               <div className="timeline-card">
                 <div className="timeline-icon">⚙️</div>
-                <h3>Dial in your grinder</h3>
-                <p>Save your grinder settings per coffee and brew method. Hit that sweet spot once, and you can always go back to it.</p>
+                <h3>Add your grinder</h3>
+                <p>Add your grinder by name so it's ready to attach to any recipe you build.</p>
               </div>
             </div>
 
@@ -266,18 +264,30 @@ function App() {
               <div className="timeline-card">
                 <div className="timeline-icon">📋</div>
                 <h3>Build a recipe</h3>
-                <p>Design step-by-step brewing recipes with precise timings, water amounts, and temperatures — as simple or detailed as you like.</p>
+                <p>Design step-by-step brewing recipes with precise timings and water amounts. Set a grind size and you're ready to brew.</p>
               </div>
             </div>
 
             <div className="timeline-step">
               <div className="timeline-node">
                 <div className="timeline-num">04</div>
+                <div className="timeline-connector" />
+              </div>
+              <div className="timeline-card">
+                <div className="timeline-icon">▶</div>
+                <h3>Brew</h3>
+                <p>Execute your recipe with built-in guided timers for each step. Just follow along and let the app keep time.</p>
+              </div>
+            </div>
+
+            <div className="timeline-step">
+              <div className="timeline-node">
+                <div className="timeline-num">05</div>
               </div>
               <div className="timeline-card">
                 <div className="timeline-icon">★</div>
-                <h3>Brew, rate & refine</h3>
-                <p>Execute your recipe with built-in guided timers. Rate the result and tweak until every cup is exactly what you want.</p>
+                <h3>Rate & refine</h3>
+                <p>Rate the result and tweak your recipe until every cup is exactly what you want.</p>
               </div>
             </div>
           </div>
@@ -384,28 +394,28 @@ function App() {
           <div className="highlight-grid highlight-grid-rev">
             <div className="highlight-text">
               <span className="section-badge">Grinder management</span>
-              <h2>Never lose your perfect setting</h2>
+              <h2>Your grinder, attached to every recipe</h2>
               <p>
-                Track grinder settings alongside each coffee so you can
-                consistently reproduce your best brews. Different bean?
-                Different method? Save a separate profile for each.
+                Add your grinders by name, then set a grind size on each recipe
+                you build. Every brew has exactly the setting that made it great,
+                right there alongside the rest of your recipe.
               </p>
               <ul className="check-list">
                 <li>
                   <span className="check-icon">✓</span>
-                  Per-coffee grinder settings
+                  Add grinders by name
                 </li>
                 <li>
                   <span className="check-icon">✓</span>
-                  Multiple grinder support
+                  Grind size stored per recipe
                 </li>
                 <li>
                   <span className="check-icon">✓</span>
-                  Burr type & grind notes
+                  Use any grinder with any recipe
                 </li>
                 <li>
                   <span className="check-icon">✓</span>
-                  Quick-access profiles
+                  Never forget what worked
                 </li>
               </ul>
             </div>
@@ -413,27 +423,41 @@ function App() {
             <div className="highlight-visual">
               <div className="grinder-demo">
                 <div className="gd-header">
+                  <span className="gd-label">Grinder</span>
                   <span className="gd-title">1Zpresso J-Max</span>
-                  <span className="gd-badge">Active</span>
                 </div>
-                <div className="gd-dial-wrap">
-                  <div className="gd-dial">
-                    <div className="gd-dial-ring" />
-                    <div className="gd-dial-inner">
-                      <span className="gd-setting">18</span>
-                      <span className="gd-unit">clicks</span>
+                <div className="gd-divider" />
+                <div className="gd-recipes">
+                  <div className="gd-recipe gd-recipe-active">
+                    <div className="gd-recipe-left">
+                      <span className="gd-recipe-name">Ethiopian V60</span>
+                      <span className="gd-recipe-sub">Light roast · 295g water</span>
                     </div>
-                    <div className="gd-dial-marker" />
+                    <div className="gd-grind-pill">
+                      <span className="gd-grind-label">Grind size</span>
+                      <span className="gd-grind-val">28 clicks</span>
+                    </div>
                   </div>
-                </div>
-                <div className="gd-tags">
-                  <span className="gd-tag">Fine</span>
-                  <span className="gd-tag">Espresso</span>
-                  <span className="gd-tag">Ethiopian</span>
-                </div>
-                <div className="gd-notes">
-                  <span className="gd-notes-label">Notes</span>
-                  <span className="gd-notes-text">Sweet spot for light roast V60. Bright and clean with no bitterness.</span>
+                  <div className="gd-recipe">
+                    <div className="gd-recipe-left">
+                      <span className="gd-recipe-name">Honduras Chemex</span>
+                      <span className="gd-recipe-sub">Medium roast · 500g water</span>
+                    </div>
+                    <div className="gd-grind-pill">
+                      <span className="gd-grind-label">Grind size</span>
+                      <span className="gd-grind-val">34 clicks</span>
+                    </div>
+                  </div>
+                  <div className="gd-recipe">
+                    <div className="gd-recipe-left">
+                      <span className="gd-recipe-name">Kenya AeroPress</span>
+                      <span className="gd-recipe-sub">Light roast · 200g water</span>
+                    </div>
+                    <div className="gd-grind-pill">
+                      <span className="gd-grind-label">Grind size</span>
+                      <span className="gd-grind-val">22 clicks</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
