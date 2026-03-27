@@ -40,7 +40,7 @@ type SwitchRecipeInfo struct {
 	Name      string        `json:"name"`
 	GramIn    int           `json:"grams_in"`
 	MlOut     int           `json:"ml_out"`
-	WaterTemp int           `json:"water_temp"`
+	WaterTemp string        `json:"water_temp"`
 	GrindSize string        `json:"grind_size"`
 	Phases    []SwitchPhase `json:"phases"`
 }
@@ -55,7 +55,7 @@ type V60RecipeInfo struct {
 	Name      string     `json:"name"`
 	GramIn    int        `json:"grams_in"`
 	MlOut     int        `json:"ml_out"`
-	WaterTemp int        `json:"water_temp"`
+	WaterTemp string     `json:"water_temp"`
 	GrindSize string     `json:"grind_size"`
 	Phases    []V60Phase `json:"phases"`
 }
@@ -97,6 +97,11 @@ func ValidateRecipe(v *validator.Validator, recipe *Recipe) {
 		v.Check(info.GramIn < 10000, "grams_in", "must be less than ten thousand")
 		v.Check(len(info.Phases) > 0, "phases", "must be greater than zero")
 		v.Check(len(info.GrindSize) <= 50, "grind_size", "must not be more than 50 bytes")
+
+		if info.WaterTemp != "" {
+			v.Check(validator.Matches(info.WaterTemp, validator.TempRX), "water temperature", "must be an int ending in either °C or °F")
+		}
+
 		for _, phase := range info.Phases {
 			ValidateV60Phase(v, &phase)
 		}
@@ -114,6 +119,11 @@ func ValidateRecipe(v *validator.Validator, recipe *Recipe) {
 		v.Check(info.GramIn < 10000, "grams_in", "must be less than ten thousand")
 		v.Check(len(info.Phases) > 0, "phases", "must be greater than zero")
 		v.Check(len(info.GrindSize) <= 50, "grind_size", "must not be more than 50 bytes")
+
+		if info.WaterTemp != "" {
+			v.Check(validator.Matches(info.WaterTemp, validator.TempRX), "water temperature", "must be an int ending in either °C or °F")
+		}
+
 		for _, phase := range info.Phases {
 			ValidateSwitchPhase(v, &phase)
 		}
