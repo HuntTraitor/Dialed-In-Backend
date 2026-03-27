@@ -26,6 +26,20 @@ ENV PATH=$PATH:/root/go/bin
 # Entry point for dev environment
 ENTRYPOINT CompileDaemon --build="make build" --command="./bin/api -smtp-host=localhost -smtp-port=1025 -smtp-username= -smtp-password= -metrics=true"
 
+# Build stage for frontend
+FROM node:alpine AS frontend
+
+# Setup folders
+WORKDIR /app/frontend
+
+# Install dependencies
+COPY frontend/package*.json ./
+RUN npm ci
+
+# Build the frontend
+COPY frontend/ .
+RUN npm run build
+
 # Build stage for production environment
 FROM golang:alpine AS prod
 
@@ -46,6 +60,9 @@ RUN apk add --no-cache make gcc libc-dev git
 
 # Copy the source code and build the application
 COPY . .
+
+# Copy the built frontend dist from the frontend stage
+COPY --from=frontend /app/frontend/dist ./frontend/dist
 
 # Build the application in production
 RUN make build
