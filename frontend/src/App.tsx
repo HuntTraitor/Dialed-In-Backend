@@ -1,6 +1,17 @@
+import { Routes, Route } from 'react-router-dom'
 import './App.css'
+import Deadlock from './pages/Deadlock'
 
 function App() {
+  return (
+    <Routes>
+      <Route path="/deadlock" element={<Deadlock />} />
+      <Route path="*" element={<LandingPage />} />
+    </Routes>
+  )
+}
+
+function LandingPage() {
   return (
     <div className="landing">
 
@@ -513,3 +524,4 @@ function App() {
 }
 
 export default App
+
