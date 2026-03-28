@@ -4,19 +4,26 @@ import './Deadlock.css'
 // ── DATA ─────────────────────────────────────────────────────────────────────
 
 const GAME_MODIFIERS = [
-  { name: 'Everyone Bans Their Main', desc: "Before picking, each player calls out their main — that hero is off limits for them this game." },
   { name: 'No Speaking English',    desc: 'All comms must be in another language. Speaking English = drink.' },
   { name: 'No Swearing',            desc: 'Keep it clean. Any swear word = drink.' },
   { name: 'Callouts Must Be Sung',  desc: 'Every in-game callout must be sung. Speaking normally = drink.' },
   { name: 'Dead Volume Off',        desc: 'When you die, turn your volume off until your next death.' },
-  { name: '3rd Person Only',        desc: 'No "I" or "me". Everyone speaks in 3rd person all game.' },
   { name: 'No Dead Chat',           desc: "When you're dead: no speaking, no pinging. Any violation = drink." },
   { name: 'Lord & Squire',          desc: 'Two players are paired. The Squire helps the Lord secure kills and farm. Lords give orders, Squires follow. Roles locked all game.' },
   { name: 'Class Warfare',          desc: "Roll a dice: one player builds full Melee (Hunter's Aura, Crippling Headshot, etc.), one Gun only, one Spirit only, one Vitality only." },
+  { name: "One Ability Andy", desc: "Each person rolls 1-4. That's the only ability they cannot use all game. They use it  = drink."},
+  { name: "Announcers Desk", desc: "Each dead player must commentate the game like a sports broadcaster until they respawn. Breaking character = drink."},
+  { name: "Shop Roulette", desc: "You can only buy items by closing your eyes and clicking randomly in the shop. No refunds."},
+  { name: "Compliment Your Killer", desc: "Every time you die, you must genuinely compliment the enemy who killed you in all-chat. Sarcasm detected by the group = drink."},
+  { name: "Hero Accent", desc: "You must do a voice/accent that matches your hero's vibe all game. Breaking character = drink."},
+  { name: "All Chat Warrior", desc: "Every kill you get must be followed by a trash talk message in all-chat. Forget = drink."},
+  { name: 'Wrong Callouts Only', desc: 'Every callout must be slightly incorrect. Accurate info = drink.' },
+  { name: 'Blame Someone Else', desc: 'Every death must be blamed on a teammate in all chat. Accepting fault = drink.' },
+  { name: 'Nemesis System', desc: 'Each person picks one enemy to hunt all game. Ignoring them = drink.' },
+  { name: 'Narrate Your Thoughts', desc: "Each player must say everything they're thinking. Silence = drink." },
 ]
 
 const ROLES = ['Tank', 'Spirit', 'Gun', 'Support'] as const
-const ABILITY_MAXES = [1, 2, 3, 4] as const
 
 const ITEMS = {
   weapon: [
@@ -57,6 +64,13 @@ const ITEMS = {
     'Plated Armor', 'Siphon Bullets', 'Spellbreaker', 'Unstoppable', 'Vampiric Burst', 'Witchmail',
   ],
 }
+
+// Flat pool of all items with their category
+const ALL_ITEMS: { cat: 'weapon' | 'spirit' | 'vitality'; item: string }[] = [
+  ...ITEMS.weapon.map(item => ({ cat: 'weapon' as const, item })),
+  ...ITEMS.spirit.map(item => ({ cat: 'spirit' as const, item })),
+  ...ITEMS.vitality.map(item => ({ cat: 'vitality' as const, item })),
+]
 
 interface Hero {
   name: string
@@ -112,18 +126,26 @@ function pickRandom<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
-function pickOnePerCategory(exclude: string[] = []) {
-  return (['weapon', 'spirit', 'vitality'] as const).map(cat => ({
-    cat,
-    item: pickRandom(ITEMS[cat].filter(i => !exclude.includes(i))),
-  }))
+function pickNFromPool(n: number, excludeItems: string[] = []) {
+  const pool = ALL_ITEMS.filter(x => !excludeItems.includes(x.item))
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]]
+  }
+  return pool.slice(0, n)
 }
 
-function generateResult() {
-  const cantBuy = pickOnePerCategory()
+interface HeroResult {
+  role: string
+  cantBuy: { cat: string; item: string }[]
+  mustBuy: { cat: string; item: string }[]
+}
+
+function generateResult(): HeroResult {
+  const cantBuy = pickNFromPool(3)
   const cantItems = cantBuy.map(c => c.item)
-  const mustBuy = pickOnePerCategory(cantItems)
-  return { role: pickRandom(ROLES), abilityMax: pickRandom(ABILITY_MAXES), cantBuy, mustBuy }
+  const mustBuy = pickNFromPool(3, cantItems)
+  return { role: pickRandom(ROLES), cantBuy, mustBuy }
 }
 
 const CAT_COLORS: Record<string, string> = {
@@ -133,6 +155,14 @@ const CAT_COLORS: Record<string, string> = {
 }
 
 // ── GAME ROLL ─────────────────────────────────────────────────────────────────
+
+const STANDING_RULES = [
+  { rule: 'You get hyperlined', who: 'drink' },
+  { rule: "Don't hit a max sinner's", who: 'drink' },
+  { rule: 'Lose', who: 'drink' },
+  { rule: 'Every 5 deaths', who: 'drink' },
+  { rule: 'Random is cringe / flames unprovoked', who: 'everyone drink' },
+]
 
 // Build an infinitely-looping list for the drum effect
 const DRUM_ITEMS = [...GAME_MODIFIERS, ...GAME_MODIFIERS, ...GAME_MODIFIERS]
@@ -261,6 +291,23 @@ function GameRoll() {
             <p className="gr-result-desc">{result.desc}</p>
           </div>
         )}
+
+        {/* Standing rules */}
+        <div className="gr-rules">
+          <div className="gr-rules-header">
+            <span className="gr-rules-line" />
+            <span className="gr-rules-title">Standing Rules</span>
+            <span className="gr-rules-line" />
+          </div>
+          {STANDING_RULES.map(({ rule, who }) => (
+            <div key={rule} className="gr-rule-row">
+              <span className="gr-rule-text">{rule}</span>
+              <span className={`gr-rule-who ${who === 'everyone drink' ? 'gr-rule-who-all' : ''}`}>
+                {who}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -268,42 +315,38 @@ function GameRoll() {
 
 // ── HERO MODAL ─────────────────────────────────────────────────────────────────
 
-interface HeroResult {
-  role: string
-  abilityMax: number
-  cantBuy: { cat: string; item: string }[]
-  mustBuy: { cat: string; item: string }[]
-}
-
-const CATS = ['weapon', 'spirit', 'vitality'] as const
-
 // Display values shown in the card (either cycling or locked)
 interface DisplayVals {
   role: string
-  abilityMax: number | string
-  cant: Record<string, string>
-  must: Record<string, string>
+  cant: { cat: string; item: string }[]
+  must: { cat: string; item: string }[]
 }
 
 function randomDisplay(): DisplayVals {
   return {
     role: pickRandom(ROLES),
-    abilityMax: pickRandom(ABILITY_MAXES),
-    cant: Object.fromEntries(CATS.map(c => [c, pickRandom(ITEMS[c])])),
-    must: Object.fromEntries(CATS.map(c => [c, pickRandom(ITEMS[c])])),
+    cant: pickNFromPool(3),
+    must: pickNFromPool(3),
   }
 }
 
 function resultToDisplay(r: HeroResult): DisplayVals {
   return {
     role: r.role,
-    abilityMax: r.abilityMax,
-    cant: Object.fromEntries(r.cantBuy.map(({ cat, item }) => [cat, item])),
-    must: Object.fromEntries(r.mustBuy.map(({ cat, item }) => [cat, item])),
+    cant: r.cantBuy,
+    must: r.mustBuy,
   }
 }
 
-function HeroModal({ hero, onClose }: { hero: Hero; onClose: () => void }) {
+function HeroModal({
+  hero,
+  onClose,
+  onResult,
+}: {
+  hero: Hero
+  onClose: () => void
+  onResult: (r: HeroResult) => void
+}) {
   const [rolling, setRolling]   = useState(true)
   const [display, setDisplay]   = useState<DisplayVals>(() => randomDisplay())
   const ivRef                   = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -316,6 +359,7 @@ function HeroModal({ hero, onClose }: { hero: Hero; onClose: () => void }) {
       clearInterval(ivRef.current!)
       setDisplay(resultToDisplay(final))
       setRolling(false)
+      onResult(final)
     }, 2000)
   }
 
@@ -366,19 +410,12 @@ function HeroModal({ hero, onClose }: { hero: Hero; onClose: () => void }) {
 
         {/* Right — same layout always, values flash while rolling */}
         <div className="hm-right">
-          {/* Stats */}
+          {/* Role stat */}
           <div className="hm-stats">
             <div className="hm-stat">
               <span className="hm-stat-label">Role</span>
               <span className={`hm-stat-value ${rolling ? 'hm-flash' : 'hm-lock-in'}`}>
                 {display.role}
-              </span>
-            </div>
-            <div className="hm-stat-sep" />
-            <div className="hm-stat">
-              <span className="hm-stat-label">Max Ability</span>
-              <span className={`hm-stat-value hm-stat-big ${rolling ? 'hm-flash' : 'hm-lock-in'}`}>
-                {display.abilityMax}
               </span>
             </div>
           </div>
@@ -388,12 +425,12 @@ function HeroModal({ hero, onClose }: { hero: Hero; onClose: () => void }) {
             <div className="hm-section-header hm-cant-header">
               <span className="hm-section-line" /><span className="hm-section-title">Can't Buy</span><span className="hm-section-line" />
             </div>
-            {CATS.map(cat => (
-              <div key={cat} className="hm-item-row">
-                <span className="hm-item-dot" style={{ background: CAT_COLORS[cat] }} />
-                <span className="hm-item-cat">{cat.charAt(0).toUpperCase() + cat.slice(1)}</span>
+            {display.cant.map((entry, i) => (
+              <div key={i} className="hm-item-row">
+                <span className="hm-item-dot" style={{ background: CAT_COLORS[entry.cat] }} />
+                <span className="hm-item-cat">{entry.cat.charAt(0).toUpperCase() + entry.cat.slice(1)}</span>
                 <span className={`hm-item-name hm-item-cant ${rolling ? 'hm-flash' : 'hm-lock-in'}`}>
-                  {display.cant[cat]}
+                  {entry.item}
                 </span>
               </div>
             ))}
@@ -404,12 +441,12 @@ function HeroModal({ hero, onClose }: { hero: Hero; onClose: () => void }) {
             <div className="hm-section-header hm-must-header">
               <span className="hm-section-line" /><span className="hm-section-title">Must Buy</span><span className="hm-section-line" />
             </div>
-            {CATS.map(cat => (
-              <div key={cat} className="hm-item-row">
-                <span className="hm-item-dot" style={{ background: CAT_COLORS[cat] }} />
-                <span className="hm-item-cat">{cat.charAt(0).toUpperCase() + cat.slice(1)}</span>
+            {display.must.map((entry, i) => (
+              <div key={i} className="hm-item-row">
+                <span className="hm-item-dot" style={{ background: CAT_COLORS[entry.cat] }} />
+                <span className="hm-item-cat">{entry.cat.charAt(0).toUpperCase() + entry.cat.slice(1)}</span>
                 <span className={`hm-item-name hm-item-must ${rolling ? 'hm-flash' : 'hm-lock-in'}`}>
-                  {display.must[cat]}
+                  {entry.item}
                 </span>
               </div>
             ))}
@@ -430,12 +467,95 @@ function HeroModal({ hero, onClose }: { hero: Hero; onClose: () => void }) {
   )
 }
 
+// ── HISTORY ───────────────────────────────────────────────────────────────────
+
+interface HistoryEntry {
+  id: number
+  hero: Hero
+  result: HeroResult
+}
+
+function HistorySection({ entries }: { entries: HistoryEntry[] }) {
+  if (entries.length === 0) return null
+
+  return (
+    <div className="hr-history">
+      <div className="hr-history-header">
+        <span className="hr-history-line" />
+        <span className="hr-history-title">Roll History</span>
+        <span className="hr-history-line" />
+      </div>
+      <div className="hr-history-list">
+        {entries.map(entry => (
+          <div
+            key={entry.id}
+            className="hm-modal hr-history-card"
+            style={{ '--hero-color': entry.hero.color } as React.CSSProperties}
+          >
+            <div className="hm-hero-glow" />
+
+            {/* Left — identical to modal left column */}
+            <div className="hm-left">
+              <img src={`/heroes/${entry.hero.img}`} alt={entry.hero.name} className="hm-portrait" />
+              <div className="hm-hero-name">{entry.hero.name}</div>
+              <div className="hm-drink">
+                <span className="hm-drink-icon">🍺</span>
+                <div>
+                  <div className="hm-drink-label">Dedicate a drink when</div>
+                  <div className="hm-drink-rule">{entry.hero.drinkModifier}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right — identical to modal right column */}
+            <div className="hm-right">
+              <div className="hm-stats">
+                <div className="hm-stat">
+                  <span className="hm-stat-label">Role</span>
+                  <span className="hm-stat-value hm-lock-in">{entry.result.role}</span>
+                </div>
+              </div>
+
+              <div className="hm-section">
+                <div className="hm-section-header hm-cant-header">
+                  <span className="hm-section-line" /><span className="hm-section-title">Can't Buy</span><span className="hm-section-line" />
+                </div>
+                {entry.result.cantBuy.map((x, i) => (
+                  <div key={i} className="hm-item-row">
+                    <span className="hm-item-dot" style={{ background: CAT_COLORS[x.cat] }} />
+                    <span className="hm-item-cat">{x.cat.charAt(0).toUpperCase() + x.cat.slice(1)}</span>
+                    <span className="hm-item-name hm-item-cant">{x.item}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hm-section">
+                <div className="hm-section-header hm-must-header">
+                  <span className="hm-section-line" /><span className="hm-section-title">Must Buy</span><span className="hm-section-line" />
+                </div>
+                {entry.result.mustBuy.map((x, i) => (
+                  <div key={i} className="hm-item-row">
+                    <span className="hm-item-dot" style={{ background: CAT_COLORS[x.cat] }} />
+                    <span className="hm-item-cat">{x.cat.charAt(0).toUpperCase() + x.cat.slice(1)}</span>
+                    <span className="hm-item-name hm-item-must">{x.item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── HERO ROLL ─────────────────────────────────────────────────────────────────
 
 function HeroRoll() {
   const [activeHero, setActiveHero] = useState<Hero | null>(null)
-  // key forces modal to remount (fresh roll) even when same hero is reselected
   const [modalKey, setModalKey] = useState(0)
+  const [history, setHistory] = useState<HistoryEntry[]>([])
+  const historyIdRef = useRef(0)
 
   function open(hero: Hero) {
     setActiveHero(hero)
@@ -444,6 +564,15 @@ function HeroRoll() {
 
   function openRandom() {
     open(pickRandom(HEROES))
+  }
+
+  function handleResult(result: HeroResult) {
+    if (!activeHero) return
+    const hero = activeHero
+    setHistory(prev => [
+      { id: historyIdRef.current++, hero, result },
+      ...prev,
+    ])
   }
 
   return (
@@ -473,8 +602,15 @@ function HeroRoll() {
         </button>
       </div>
 
+      <HistorySection entries={history} />
+
       {activeHero && (
-        <HeroModal key={modalKey} hero={activeHero} onClose={() => setActiveHero(null)} />
+        <HeroModal
+          key={modalKey}
+          hero={activeHero}
+          onClose={() => setActiveHero(null)}
+          onResult={handleResult}
+        />
       )}
     </div>
   )

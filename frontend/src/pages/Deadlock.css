@@ -285,6 +285,71 @@
   color: #94A3B8; margin: 0;
 }
 
+/* ── Standing rules ── */
+.gr-rules {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gr-rules-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.gr-rules-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(192,160,107,0.18), transparent);
+}
+.gr-rules-title {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #3D4151;
+  flex-shrink: 0;
+}
+
+.gr-rule-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #080A10;
+  border: 1px solid #1A1D28;
+  border-radius: 10px;
+}
+
+.gr-rule-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748B;
+}
+
+.gr-rule-who {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #C0A06B;
+  background: rgba(192,160,107,0.08);
+  border: 1px solid rgba(192,160,107,0.2);
+  border-radius: 20px;
+  padding: 3px 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.gr-rule-who-all {
+  color: #F97316;
+  background: rgba(249,115,22,0.08);
+  border-color: rgba(249,115,22,0.25);
+}
+
 /* ══════════════════════════════════════════════════════
    HERO GRID
 ══════════════════════════════════════════════════════ */
@@ -597,6 +662,54 @@
   color: #EDD07A;
 }
 .hm-reroll-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ══════════════════════════════════════════════════════
+   HERO ROLL HISTORY
+══════════════════════════════════════════════════════ */
+
+.hr-history {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hr-history-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.hr-history-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(192,160,107,0.2), transparent);
+}
+.hr-history-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #3D4151;
+  flex-shrink: 0;
+}
+
+.hr-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Override hm-modal so it sits inline instead of fixed/centered */
+.hr-history-card {
+  position: relative !important;
+  max-width: 100% !important;
+  max-height: none !important;
+  animation: hr-card-in 0.4s cubic-bezier(0.34,1.4,0.64,1) both !important;
+}
+@keyframes hr-card-in {
+  from { opacity: 0; transform: scale(0.96) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
 
 /* ══════════════════════════════════════════════════════
    RESPONSIVE
