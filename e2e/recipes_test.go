@@ -9,6 +9,7 @@ import (
 	"github.com/gavv/httpexpect"
 	"github.com/hunttraitor/dialed-in-backend/e2e/testutils"
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPostRecipes(t *testing.T) {
@@ -148,6 +149,24 @@ func TestPostRecipes(t *testing.T) {
 					info.Value("ml_out").Number().Equal(testutils.ValidSwitchInfo().MlOut)
 					info.Value("grind_size").String().Equal(testutils.ValidSwitchInfo().GrindSize)
 					info.Value("phases").Array().Length().Equal(len(testutils.ValidSwitchInfo().Phases))
+				},
+			},
+			{
+				name: "Successfully posts without grinder_size field",
+				mutate: func(info *data.SwitchRecipeInfo) {
+					info.GrindSize = ""
+				},
+				assert: func(res *httpexpect.Response) {
+					recipe := res.Status(http.StatusCreated).JSON().Object().Value("recipe").Object()
+					recipe.Value("id").Number().Gt(0)
+					recipe.Value("user_id").Number().Equal(user.ID)
+					recipe.Value("version").Number().Equal(1)
+					info := recipe.Value("info").Object()
+					info.Value("name").String().Equal(testutils.ValidV60Info().Name)
+					info.NotContainsKey("grind_size")
+					info.Value("grams_in").Number().Equal(testutils.ValidV60Info().GramIn)
+					info.Value("ml_out").Number().Equal(testutils.ValidV60Info().MlOut)
+					info.Value("phases").Array().Length().Equal(len(testutils.ValidV60Info().Phases))
 				},
 			},
 			{
@@ -352,6 +371,24 @@ func TestPostRecipes(t *testing.T) {
 				},
 			},
 			{
+				name: "Successfully posts without grinder_size field",
+				mutate: func(info *data.V60RecipeInfo) {
+					info.GrindSize = ""
+				},
+				assert: func(res *httpexpect.Response) {
+					recipe := res.Status(http.StatusCreated).JSON().Object().Value("recipe").Object()
+					recipe.Value("id").Number().Gt(0)
+					recipe.Value("user_id").Number().Equal(user.ID)
+					recipe.Value("version").Number().Equal(1)
+					info := recipe.Value("info").Object()
+					info.Value("name").String().Equal(testutils.ValidV60Info().Name)
+					info.NotContainsKey("grind_size")
+					info.Value("grams_in").Number().Equal(testutils.ValidV60Info().GramIn)
+					info.Value("ml_out").Number().Equal(testutils.ValidV60Info().MlOut)
+					info.Value("phases").Array().Length().Equal(len(testutils.ValidV60Info().Phases))
+				},
+			},
+			{
 				name: "Missing info fields returns errors",
 				mutate: func(info *data.V60RecipeInfo) {
 					*info = data.V60RecipeInfo{}
@@ -515,5 +552,117 @@ func TestPostRecipes(t *testing.T) {
 				tt.assert(app.Client(token).POSTJSON("/v1/recipes", req).Expect(t))
 			})
 		}
+	})
+}
+
+func TestGetAllRecipes(t *testing.T) {
+	app := testutils.NewTestApp(t)
+
+	t.Run("GET all recipes returns both v60 and switch recipes", func(t *testing.T) {
+		user := app.Factory.CreateUser(t)
+		token := app.Factory.Login(t, user.Email, user.Password)
+
+		v60 := app.Factory.CreateRecipe(t, token, 1, testutils.ValidV60Recipe())
+		sw := app.Factory.CreateRecipe(t, token, 2, testutils.ValidSwitchRecipe())
+
+		arr := app.Client(token).GET("/v1/recipes").Expect(t).
+			Status(http.StatusOK).JSON().Object().Value("recipes").Array()
+
+		arr.Length().Equal(2)
+
+		byMethodName := make(map[string]*httpexpect.Object, 2)
+		for _, v := range arr.Iter() {
+			obj := v.Object()
+			name := obj.Value("method").Object().Value("name").String().Raw()
+			byMethodName[name] = obj
+		}
+
+		assert.ElementsMatch(t, []string{"V60", "Hario Switch"}, []string{
+			byMethodName["V60"].Value("method").Object().Value("name").String().Raw(),
+			byMethodName["Hario Switch"].Value("method").Object().Value("name").String().Raw(),
+		})
+
+		for _, tc := range []struct {
+			recipe     testutils.CreateRecipeResponse
+			obj        *httpexpect.Object
+			assertInfo func(*httpexpect.Object)
+		}{
+			{
+				recipe: v60,
+				obj:    byMethodName["V60"],
+				assertInfo: func(info *httpexpect.Object) {
+					vi := testutils.ValidV60Info()
+					info.Value("name").String().Equal(vi.Name)
+					info.Value("grams_in").Number().Equal(vi.GramIn)
+					info.Value("ml_out").Number().Equal(vi.MlOut)
+					info.Value("grind_size").String().Equal(vi.GrindSize)
+					info.Value("water_temp").String().Equal(vi.WaterTemp)
+					phases := info.Value("phases").Array()
+					phases.Length().Equal(1)
+					phase := phases.Element(0).Object()
+					phase.Value("time").Number().Equal(*vi.Phases[0].Time)
+					phase.Value("amount").Number().Equal(*vi.Phases[0].Amount)
+				},
+			},
+			{
+				recipe: sw,
+				obj:    byMethodName["Hario Switch"],
+				assertInfo: func(info *httpexpect.Object) {
+					si := testutils.ValidSwitchInfo()
+					info.Value("name").String().Equal(si.Name)
+					info.Value("grams_in").Number().Equal(si.GramIn)
+					info.Value("ml_out").Number().Equal(si.MlOut)
+					info.Value("grind_size").String().Equal(si.GrindSize)
+					info.Value("water_temp").String().Equal(si.WaterTemp)
+					phases := info.Value("phases").Array()
+					phases.Length().Equal(1)
+					phase := phases.Element(0).Object()
+					phase.Value("open").Boolean().Equal(*si.Phases[0].Open)
+					phase.Value("time").Number().Equal(*si.Phases[0].Time)
+					phase.Value("amount").Number().Equal(*si.Phases[0].Amount)
+				},
+			},
+		} {
+			obj := tc.obj
+			obj.Value("id").Number().Equal(tc.recipe.Recipe.ID)
+			obj.Value("user_id").Number().Equal(user.ID)
+			obj.Value("method").Object().Value("id").Number().Gt(0)
+			obj.Value("method").Object().Value("name").String().NotEmpty()
+			obj.Value("coffee").Object().Value("id").Number().Equal(tc.recipe.Recipe.Coffee.ID)
+			obj.Value("coffee").Object().Value("info").Object().Value("name").String().Equal(tc.recipe.Recipe.Coffee.Info.Name)
+			obj.Value("grinder").Object().Value("id").Number().Equal(tc.recipe.Recipe.Grinder.ID)
+			tc.assertInfo(obj.Value("info").Object())
+			obj.Value("created_at").String().NotEmpty()
+			obj.Value("version").Number().Equal(1)
+		}
+	})
+
+	t.Run("GET all recipes without coffees or grinders is successful", func(t *testing.T) {
+		user := app.Factory.CreateUser(t)
+		token := app.Factory.Login(t, user.Email, user.Password)
+
+		v60InfoJSON, _ := json.Marshal(testutils.ValidV60Info())
+		req := testutils.CreateRecipeRequest{MethodId: 1, Info: v60InfoJSON}
+		app.Client(token).POSTJSON("/v1/recipes", req).Expect(t).Status(http.StatusCreated)
+
+		arr := app.Client(token).GET("/v1/recipes").Expect(t).
+			Status(http.StatusOK).JSON().Object().Value("recipes").Array()
+
+		arr.Length().Equal(1)
+		recipe := arr.Element(0).Object()
+		recipe.NotContainsKey("coffee")
+		recipe.NotContainsKey("grinder")
+	})
+
+	t.Run("GET all recipes unauthorized returns error", func(t *testing.T) {
+		app.Client("").GET("/v1/recipes").Expect(t).Status(http.StatusUnauthorized)
+	})
+
+	t.Run("GET all recipes no recipes returns an empty array", func(t *testing.T) {
+		user := app.Factory.CreateUser(t)
+		token := app.Factory.Login(t, user.Email, user.Password)
+
+		app.Client(token).GET("/v1/recipes").Expect(t).
+			Status(http.StatusOK).JSON().Object().Value("recipes").Array().Empty()
 	})
 }
