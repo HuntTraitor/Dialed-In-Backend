@@ -35,7 +35,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
-        go-version: 1.22.4
+        go-version: 1.26.1
 
     - name: Setup and export .env file
       run: |
@@ -74,4 +74,4 @@ jobs:
       run: sleep 20s
 
     - name: Run Tests
-      run: make test-all
+      run: make audit

@@ -131,15 +131,18 @@ tidy:
 	go fmt ./...
 	@echo 'Tidying module dependencies...'
 	go mod tidy
+	go mod verify
+	go mod vendor
+	go fix ./...
 
 ## audit: run quality control checks
 audit:
 	@echo 'Checking module dependencies...'
-	go mod tidy
+	go mod tidy -diff
 	go mod verify
 	@echo 'Verifying code...'
 	go vet ./...
-	staticcheck ./...
+	go tool staticcheck ./...
 	@echo 'Running tests...'
 	make test-all
 
