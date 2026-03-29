@@ -83,6 +83,9 @@ func decodeInfoStrict[T any](v *validator.Validator, raw json.RawMessage) (T, bo
 
 // ValidateRecipe validates a specific Recipe is correct based on the Method
 func ValidateRecipe(v *validator.Validator, recipe *Recipe) {
+	v.Check(recipe.MethodID > 0, "method_id", "must be provided")
+	v.Check(recipe.Info != nil, "info", "must be provided")
+
 	switch recipe.MethodID {
 	case 1:
 		info, ok := decodeInfoStrict[V60RecipeInfo](v, recipe.Info)
@@ -93,8 +96,8 @@ func ValidateRecipe(v *validator.Validator, recipe *Recipe) {
 		v.Check(len(info.Name) <= 100, "name", "must not be more than 100 bytes")
 		v.Check(info.MlOut > 0, "ml_out", "must be greater than zero")
 		v.Check(info.GramIn > 0, "grams_in", "must be greater than zero")
-		v.Check(info.MlOut < 1000, "ml_out", "must be less than a thousand")
-		v.Check(info.GramIn < 10000, "grams_in", "must be less than ten thousand")
+		v.Check(info.MlOut < 1000, "ml_out", "must be less than 1000ml")
+		v.Check(info.GramIn < 10000, "grams_in", "must be less than 10000g")
 		v.Check(len(info.Phases) > 0, "phases", "must be greater than zero")
 		v.Check(len(info.GrindSize) <= 50, "grind_size", "must not be more than 50 bytes")
 
@@ -115,8 +118,8 @@ func ValidateRecipe(v *validator.Validator, recipe *Recipe) {
 		v.Check(len(info.Name) <= 100, "name", "must not be more than 100 bytes")
 		v.Check(info.MlOut > 0, "ml_out", "must be greater than zero")
 		v.Check(info.GramIn > 0, "grams_in", "must be greater than zero")
-		v.Check(info.MlOut < 1000, "ml_out", "must be less than a thousand")
-		v.Check(info.GramIn < 10000, "grams_in", "must be less than ten thousand")
+		v.Check(info.MlOut < 1000, "ml_out", "must be less than 1000ml")
+		v.Check(info.GramIn < 10000, "grams_in", "must be less than 10000g")
 		v.Check(len(info.Phases) > 0, "phases", "must be greater than zero")
 		v.Check(len(info.GrindSize) <= 50, "grind_size", "must not be more than 50 bytes")
 
@@ -140,19 +143,25 @@ func ValidateSwitchPhase(v *validator.Validator, phase *SwitchPhase) {
 	v.Check(phase.Amount != nil, "amount", "must be provided")
 	if phase.Time != nil {
 		v.Check(*phase.Time > 0, "time", "must be greater than zero")
+		v.Check(*phase.Time < 1000, "time", "must be less than 10000")
 	}
 	if phase.Amount != nil {
 		v.Check(*phase.Amount >= 0, "amount", "must be greater than or equal to zero")
+		v.Check(*phase.Amount < 1000, "amount", "must be less than 10000")
 	}
 }
 
 // ValidateV60Phase validates a v60 phase is the correct format
 func ValidateV60Phase(v *validator.Validator, phase *V60Phase) {
+	v.Check(phase.Time != nil, "time", "must be provided")
+	v.Check(phase.Amount != nil, "amount", "must be provided")
 	if phase.Time != nil {
 		v.Check(*phase.Time > 0, "time", "must be greater than zero")
+		v.Check(*phase.Time < 1000, "time", "must be less than 10000")
 	}
 	if phase.Amount != nil {
 		v.Check(*phase.Amount >= 0, "amount", "must be greater than or equal to zero")
+		v.Check(*phase.Amount < 1000, "amount", "must be less than 10000")
 	}
 }
 

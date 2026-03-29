@@ -35,6 +35,14 @@ func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Reque
 		Info:      input.Info,
 	}
 
+	v := validator.New()
+	v.Check(recipe.MethodID > 0, "method_id", "must be provided")
+	v.Check(recipe.Info != nil, "info", "must be provided")
+	if !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
 	method, err := app.models.Methods.GetOne(recipe.MethodID)
 	if err != nil {
 		switch {
@@ -46,7 +54,6 @@ func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	v := validator.New()
 	if data.ValidateRecipe(v, recipe); !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return

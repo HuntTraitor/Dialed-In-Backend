@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,9 +25,7 @@ type CoffeeForm struct {
 }
 
 type CreateCoffeeResponse struct {
-	Coffee struct {
-		ID int64 `json:"id"`
-	} `json:"coffee"`
+	Coffee data.Coffee `json:"coffee"`
 }
 
 func ValidCoffeeForm() CoffeeForm {
