@@ -29,6 +29,67 @@ type CreateRecipeRequest struct {
 	Info      json.RawMessage `json:"info,omitempty"`
 }
 
+type PatchRecipeInfo struct {
+	Name      string       `json:"name,omitempty"`
+	GramIn    int          `json:"grams_in,omitempty"`
+	MlOut     int          `json:"ml_out,omitempty"`
+	WaterTemp string       `json:"water_temp,omitempty"`
+	GrindSize string       `json:"grind_size,omitempty"`
+	Phases    []PatchPhase `json:"phases,omitempty"`
+}
+
+type PatchPhase struct {
+	Open   *bool `json:"open,omitempty"`
+	Time   *int  `json:"time,omitempty"`
+	Amount *int  `json:"amount,omitempty"`
+}
+
+type PatchRecipeRequest struct {
+	MethodID      *int64
+	CoffeeID      *int
+	GrinderID     *int64
+	NullCoffeeID  bool
+	NullGrinderID bool
+	Info          *PatchRecipeInfo
+}
+
+func ValidPatchRecipeRequest() PatchRecipeRequest {
+	vi := ValidV60Info()
+	return PatchRecipeRequest{
+		Info: &PatchRecipeInfo{
+			Name:      vi.Name,
+			GramIn:    vi.GramIn,
+			MlOut:     vi.MlOut,
+			WaterTemp: vi.WaterTemp,
+			GrindSize: vi.GrindSize,
+			Phases: []PatchPhase{
+				{Time: vi.Phases[0].Time, Amount: vi.Phases[0].Amount},
+			},
+		},
+	}
+}
+
+func (p PatchRecipeRequest) MarshalJSON() ([]byte, error) {
+	m := map[string]any{}
+	if p.MethodID != nil {
+		m["method_id"] = *p.MethodID
+	}
+	if p.NullCoffeeID {
+		m["coffee_id"] = nil
+	} else if p.CoffeeID != nil {
+		m["coffee_id"] = *p.CoffeeID
+	}
+	if p.NullGrinderID {
+		m["grinder_id"] = nil
+	} else if p.GrinderID != nil {
+		m["grinder_id"] = *p.GrinderID
+	}
+	if p.Info != nil {
+		m["info"] = p.Info
+	}
+	return json.Marshal(m)
+}
+
 func (f *FixtureFactory) CreateRecipe(t *testing.T, token string, methodId int64, r CreateRecipeRequest) CreateRecipeResponse {
 	t.Helper()
 

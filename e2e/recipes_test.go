@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -162,11 +163,11 @@ func TestPostRecipes(t *testing.T) {
 					recipe.Value("user_id").Number().Equal(user.ID)
 					recipe.Value("version").Number().Equal(1)
 					info := recipe.Value("info").Object()
-					info.Value("name").String().Equal(testutils.ValidV60Info().Name)
+					info.Value("name").String().Equal(testutils.ValidSwitchInfo().Name)
 					info.NotContainsKey("grind_size")
-					info.Value("grams_in").Number().Equal(testutils.ValidV60Info().GramIn)
-					info.Value("ml_out").Number().Equal(testutils.ValidV60Info().MlOut)
-					info.Value("phases").Array().Length().Equal(len(testutils.ValidV60Info().Phases))
+					info.Value("grams_in").Number().Equal(testutils.ValidSwitchInfo().GramIn)
+					info.Value("ml_out").Number().Equal(testutils.ValidSwitchInfo().MlOut)
+					info.Value("phases").Array().Length().Equal(len(testutils.ValidSwitchInfo().Phases))
 				},
 			},
 			{
@@ -179,6 +180,7 @@ func TestPostRecipes(t *testing.T) {
 					errs.Value("grams_in").String().NotEmpty()
 					errs.Value("ml_out").String().NotEmpty()
 					errs.Value("phases").String().NotEmpty()
+					errs.Value("water_temp").String().NotEmpty()
 					errs.Value("name").String().NotEmpty()
 				},
 			},
@@ -398,6 +400,7 @@ func TestPostRecipes(t *testing.T) {
 					errs.Value("grams_in").String().NotEmpty()
 					errs.Value("ml_out").String().NotEmpty()
 					errs.Value("phases").String().NotEmpty()
+					errs.Value("water_temp").String().NotEmpty()
 					errs.Value("name").String().NotEmpty()
 				},
 			},
@@ -664,5 +667,190 @@ func TestGetAllRecipes(t *testing.T) {
 
 		app.Client(token).GET("/v1/recipes").Expect(t).
 			Status(http.StatusOK).JSON().Object().Value("recipes").Array().Empty()
+	})
+}
+
+func TestPatchRecipe(t *testing.T) {
+	app := testutils.NewTestApp(t)
+	user := app.Factory.CreateUser(t)
+	token := app.Factory.Login(t, user.Email, user.Password)
+
+	coffee := app.Factory.CreateCoffee(t, token, testutils.ValidCoffeeForm())
+	grinder := app.Factory.CreateGrinder(t, token, testutils.ValidGrinder())
+
+	tests := []struct {
+		name           string
+		sourceMethodID int64
+		mutate         func(*testutils.PatchRecipeRequest)
+		assert         func(*httpexpect.Response)
+	}{
+		{
+			name:           "Successfully editing info name",
+			sourceMethodID: 1,
+			mutate: func(req *testutils.PatchRecipeRequest) {
+				req.Info.Name = "Updated Name"
+			},
+			assert: func(res *httpexpect.Response) {
+				r := res.Status(http.StatusOK).JSON().Object().Value("recipe").Object()
+				r.Value("info").Object().Value("name").String().Equal("Updated Name")
+				r.Value("version").Number().Equal(2)
+			},
+		},
+		{
+			name:           "Successfully changing coffee and grinder id",
+			sourceMethodID: 1,
+			mutate: func(req *testutils.PatchRecipeRequest) {
+				req.CoffeeID = testutils.Ptr(coffee.Coffee.ID)
+				req.GrinderID = testutils.Ptr(grinder.ID)
+			},
+			assert: func(res *httpexpect.Response) {
+				r := res.Status(http.StatusOK).JSON().Object().Value("recipe").Object()
+				r.Value("coffee").Object().Value("id").Number().Equal(coffee.Coffee.ID)
+				r.Value("grinder").Object().Value("id").Number().Equal(grinder.ID)
+				r.Value("version").Number().Equal(2)
+			},
+		},
+		{
+			name:           "Successfully modifying phases of v60",
+			sourceMethodID: 1,
+			mutate: func(req *testutils.PatchRecipeRequest) {
+				req.Info.Phases = []testutils.PatchPhase{
+					{Time: testutils.Ptr(30), Amount: testutils.Ptr(50)},
+					{Time: testutils.Ptr(60), Amount: testutils.Ptr(100)},
+				}
+			},
+			assert: func(res *httpexpect.Response) {
+				r := res.Status(http.StatusOK).JSON().Object().Value("recipe").Object()
+				phases := r.Value("info").Object().Value("phases").Array()
+				phases.Length().Equal(2)
+				phases.Element(0).Object().Value("time").Number().Equal(30)
+				phases.Element(0).Object().Value("amount").Number().Equal(50)
+				phases.Element(1).Object().Value("time").Number().Equal(60)
+				phases.Element(1).Object().Value("amount").Number().Equal(100)
+				r.Value("version").Number().Equal(2)
+			},
+		},
+		{
+			name:           "Modifying the open boolean off of a switch recipe fails",
+			sourceMethodID: 2,
+			mutate: func(req *testutils.PatchRecipeRequest) {
+				// Info has phases without "open" — switch recipe requires it
+				req.Info.Phases = []testutils.PatchPhase{
+					{Time: testutils.Ptr(30), Amount: testutils.Ptr(50)},
+				}
+			},
+			assert: func(res *httpexpect.Response) {
+				res.Status(http.StatusUnprocessableEntity).JSON().Object().
+					Path("$.error.open").String().Contains("must be provided")
+			},
+		},
+		{
+			name:           "Modifying the open boolean AND changing method_id to v60 succeeds",
+			sourceMethodID: 2,
+			mutate: func(req *testutils.PatchRecipeRequest) {
+				req.MethodID = testutils.Ptr(int64(1))
+				req.Info.Phases = []testutils.PatchPhase{
+					{Time: testutils.Ptr(30), Amount: testutils.Ptr(50)},
+				}
+			},
+			assert: func(res *httpexpect.Response) {
+				r := res.Status(http.StatusOK).JSON().Object().Value("recipe").Object()
+				r.Value("method").Object().Value("name").String().Equal("V60")
+				r.Value("info").Object().Value("phases").Array().Element(0).Object().NotContainsKey("open")
+				r.Value("version").Number().Equal(2)
+			},
+		},
+		{
+			name:           "Successfully setting coffee_id, grinder_id, and grind_size to nil",
+			sourceMethodID: 1,
+			mutate: func(req *testutils.PatchRecipeRequest) {
+				req.NullCoffeeID = true
+				req.NullGrinderID = true
+				req.Info.GrindSize = ""
+			},
+			assert: func(res *httpexpect.Response) {
+				r := res.Status(http.StatusOK).JSON().Object().Value("recipe").Object()
+				r.NotContainsKey("coffee")
+				r.NotContainsKey("grinder")
+				r.Value("info").Object().NotContainsKey("grind_size")
+				r.Value("version").Number().Equal(2)
+			},
+		},
+		{
+			name:           "Adding an unknown coffee id fails",
+			sourceMethodID: 1,
+			mutate: func(req *testutils.PatchRecipeRequest) {
+				req.CoffeeID = testutils.Ptr(99999)
+			},
+			assert: func(res *httpexpect.Response) {
+				res.Status(http.StatusNotFound).JSON().Object().
+					Value("error").String().Equal("the requested coffee could not be found")
+			},
+		},
+		{
+			name:           "Adding an unknown method id fails",
+			sourceMethodID: 1,
+			mutate: func(req *testutils.PatchRecipeRequest) {
+				req.MethodID = testutils.Ptr(int64(99999))
+			},
+			assert: func(res *httpexpect.Response) {
+				res.Status(http.StatusNotFound).JSON().Object().
+					Value("error").String().Equal("the requested method could not be found")
+			},
+		},
+		{
+			name:           "Adding an unknown grinder id fails",
+			sourceMethodID: 1,
+			mutate: func(req *testutils.PatchRecipeRequest) {
+				req.GrinderID = testutils.Ptr(int64(99999))
+			},
+			assert: func(res *httpexpect.Response) {
+				res.Status(http.StatusNotFound).JSON().Object().
+					Value("error").String().Equal("the requested grinder could not be found")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var recipeReq testutils.CreateRecipeRequest
+
+			switch tt.sourceMethodID {
+			case 1:
+				recipeReq = testutils.ValidV60Recipe()
+			case 2:
+				recipeReq = testutils.ValidSwitchRecipe()
+			default:
+				t.Fatalf("invalid sourceMethodID %d", tt.sourceMethodID)
+			}
+
+			recipe := app.Factory.CreateRecipe(t, token, tt.sourceMethodID, recipeReq)
+			req := testutils.ValidPatchRecipeRequest()
+			tt.mutate(&req)
+			res := app.Client(token).PATCHJSON(fmt.Sprintf("/v1/recipes/%d", recipe.Recipe.ID), req).Expect(t)
+			tt.assert(res)
+		})
+	}
+
+	t.Run("Patching a recipe you don't own returns an error", func(t *testing.T) {
+		otherUser := app.Factory.CreateUser(t)
+		otherToken := app.Factory.Login(t, otherUser.Email, otherUser.Password)
+		recipe := app.Factory.CreateRecipe(t, otherToken, 1, testutils.ValidV60Recipe())
+
+		app.Client(token).PATCHJSON(fmt.Sprintf("/v1/recipes/%d", recipe.Recipe.ID), testutils.ValidPatchRecipeRequest()).
+			Expect(t).Status(http.StatusNotFound).JSON().Object().
+			Value("error").String().Equal("the requested recipe could not be found")
+	})
+
+	t.Run("Patching an unknown recipe returns an error", func(t *testing.T) {
+		app.Client(token).PATCHJSON("/v1/recipes/99999", testutils.ValidPatchRecipeRequest()).
+			Expect(t).Status(http.StatusNotFound).JSON().Object().
+			Value("error").String().Equal("the requested recipe could not be found")
+	})
+
+	t.Run("Patching a recipe when not logged in returns an error", func(t *testing.T) {
+		recipe := app.Factory.CreateRecipe(t, token, 1, testutils.ValidV60Recipe())
+		app.Client("").PATCHJSON(fmt.Sprintf("/v1/recipes/%d", recipe.Recipe.ID), testutils.ValidPatchRecipeRequest()).
+			Expect(t).Status(http.StatusUnauthorized)
 	})
 }

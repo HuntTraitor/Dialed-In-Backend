@@ -59,6 +59,26 @@ func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Re-encode through typed struct so omitempty is applied
+	switch recipe.MethodID {
+	case 1:
+		var info data.V60RecipeInfo
+		err = json.Unmarshal(recipe.Info, &info)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+		recipe.Info, _ = json.Marshal(info)
+	case 2:
+		var info data.SwitchRecipeInfo
+		err = json.Unmarshal(recipe.Info, &info)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+		recipe.Info, _ = json.Marshal(info)
+	}
+
 	var coffee *data.Coffee
 
 	if recipe.CoffeeID != nil {
@@ -306,6 +326,7 @@ func (app *application) updateRecipeHandler(w http.ResponseWriter, r *http.Reque
 			default:
 				app.serverErrorResponse(w, r, err)
 			}
+			return
 		}
 	}
 
