@@ -44,6 +44,11 @@ db-status:
 up:
 	@docker compose exec -T app goose -dir=db/migrations postgres "$(MIGRATION_URL)" up
 
+## down: runs the down migrations
+.PHONY: down
+down:
+	@docker compose exec -T app goose -dir=db/migrations postgres "$(MIGRATION_URL)" down
+
 ## reset: resets the migrations
 .PHONY: reset
 reset:
