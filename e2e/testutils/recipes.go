@@ -93,12 +93,9 @@ func (p PatchRecipeRequest) MarshalJSON() ([]byte, error) {
 func (f *FixtureFactory) CreateRecipe(t *testing.T, token string, methodId int64, r CreateRecipeRequest) CreateRecipeResponse {
 	t.Helper()
 
-	grinder := f.CreateGrinder(t, token, ValidGrinder())
-	coffee := f.CreateCoffee(t, token, ValidCoffeeForm())
-
 	request := CreateRecipeRequest{
-		GrinderId: grinder.ID,
-		CoffeeId:  coffee.Coffee.ID,
+		GrinderId: r.GrinderId,
+		CoffeeId:  r.CoffeeId,
 		MethodId:  methodId,
 		Info:      r.Info,
 	}

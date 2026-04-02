@@ -564,9 +564,21 @@ func TestGetAllRecipes(t *testing.T) {
 	t.Run("GET all recipes returns both v60 and switch recipes", func(t *testing.T) {
 		user := app.Factory.CreateUser(t)
 		token := app.Factory.Login(t, user.Email, user.Password)
+		cof := app.Factory.CreateCoffee(t, token, testutils.ValidCoffeeForm())
+		gr := app.Factory.CreateGrinder(t, token, testutils.ValidGrinder())
 
-		v60 := app.Factory.CreateRecipe(t, token, 1, testutils.ValidV60Recipe())
-		sw := app.Factory.CreateRecipe(t, token, 2, testutils.ValidSwitchRecipe())
+		v60Insert := &testutils.CreateRecipeRequest{}
+		*v60Insert = testutils.ValidV60Recipe()
+		v60Insert.CoffeeId = cof.Coffee.ID
+		v60Insert.GrinderId = gr.ID
+
+		switchInsert := &testutils.CreateRecipeRequest{}
+		*switchInsert = testutils.ValidSwitchRecipe()
+		switchInsert.CoffeeId = cof.Coffee.ID
+		switchInsert.GrinderId = gr.ID
+
+		v60 := app.Factory.CreateRecipe(t, token, 1, *v60Insert)
+		sw := app.Factory.CreateRecipe(t, token, 2, *switchInsert)
 
 		arr := app.Client(token).GET("/v1/recipes").Expect(t).
 			Status(http.StatusOK).JSON().Object().Value("recipes").Array()
@@ -852,5 +864,127 @@ func TestPatchRecipe(t *testing.T) {
 		recipe := app.Factory.CreateRecipe(t, token, 1, testutils.ValidV60Recipe())
 		app.Client("").PATCHJSON(fmt.Sprintf("/v1/recipes/%d", recipe.Recipe.ID), testutils.ValidPatchRecipeRequest()).
 			Expect(t).Status(http.StatusUnauthorized)
+	})
+}
+
+func TestGetOneRecipe(t *testing.T) {
+	app := testutils.NewTestApp(t)
+	user := app.Factory.CreateUser(t)
+	token := app.Factory.Login(t, user.Email, user.Password)
+
+	t.Run("Get one recipe works with valid values", func(t *testing.T) {
+		cof := app.Factory.CreateCoffee(t, token, testutils.ValidCoffeeForm())
+		gr := app.Factory.CreateGrinder(t, token, testutils.ValidGrinder())
+
+		recipe := &testutils.CreateRecipeRequest{}
+		*recipe = testutils.ValidV60Recipe()
+		recipe.CoffeeId = cof.Coffee.ID
+		recipe.GrinderId = gr.ID
+		rec := app.Factory.CreateRecipe(t, token, 1, *recipe)
+
+		res := app.Client(token).GET(fmt.Sprintf("/v1/recipes/%d", rec.Recipe.ID)).
+			Expect(t).Status(http.StatusOK).JSON().Object().Value("recipe").Object()
+
+		// top level values ALL exist
+		res.Value("id").Number().Equal(rec.Recipe.ID)
+		res.Value("user_id").Number().Equal(user.ID)
+		res.Value("created_at").String().NotEmpty()
+		res.Value("version").Number().Equal(1)
+
+		// Method value check
+		method := res.Value("method").Object()
+		method.Value("id").Number().Equal(1)
+		method.Value("name").String().Equal("V60")
+		method.Value("created_at").String().NotEmpty()
+
+		coffee := res.Value("coffee").Object()
+		coffee.Value("id").Number().Equal(cof.Coffee.ID)
+		coffee.Value("user_id").Number().Equal(user.ID)
+		coffee.Value("info").Object().Value("name").String().Equal(cof.Coffee.Info.Name)
+		coffee.Value("info").Object().Value("roaster").String().Equal(cof.Coffee.Info.Roaster)
+		coffee.Value("info").Object().Value("region").String().Equal(cof.Coffee.Info.Region)
+		coffee.Value("info").Object().Value("process").String().Equal(cof.Coffee.Info.Process)
+		coffee.Value("info").Object().Value("decaf").Boolean().Equal(cof.Coffee.Info.Decaf)
+		coffee.Value("info").Object().Value("origin_type").String().Equal(cof.Coffee.Info.OriginType)
+		coffee.Value("info").Object().Value("rating").Number().Equal(float64(cof.Coffee.Info.Rating))
+		coffee.Value("info").Object().Value("tasting_notes").Array().Length().Equal(len(cof.Coffee.Info.TastingNotes))
+		coffee.Value("info").Object().Value("roast_level").String().Equal(cof.Coffee.Info.RoastLevel)
+		coffee.Value("info").Object().Value("cost").Number().Equal(cof.Coffee.Info.Cost)
+		coffee.Value("info").Object().Value("img").String().Equal(cof.Coffee.Info.Img)
+		coffee.Value("info").Object().Value("description").String().Equal(cof.Coffee.Info.Description)
+		coffee.Value("info").Object().Value("variety").String().Equal(cof.Coffee.Info.Variety)
+
+		grinder := res.Value("grinder").Object()
+		grinder.Value("id").Number().Equal(gr.ID)
+		grinder.Value("user_id").Number().Equal(user.ID)
+		grinder.Value("name").String().Equal(gr.Name)
+		grinder.Value("created_at").String().NotEmpty()
+		grinder.Value("version").Number().Equal(1)
+
+		info := res.Value("info").Object()
+		info.Value("name").String().Equal(testutils.ValidV60Info().Name)
+		info.Value("grams_in").Number().Equal(testutils.ValidV60Info().GramIn)
+		info.Value("ml_out").Number().Equal(testutils.ValidV60Info().MlOut)
+		info.Value("water_temp").String().Equal(testutils.ValidV60Info().WaterTemp)
+		info.Value("grind_size").String().Equal(testutils.ValidV60Info().GrindSize)
+		info.Value("phases").Array().Length().Equal(len(testutils.ValidV60Info().Phases))
+	})
+
+	t.Run("Get one recipe works if there is no coffee or grinder", func(t *testing.T) {
+		rec := app.Factory.CreateRecipe(t, token, 1, testutils.ValidV60Recipe())
+
+		res := app.Client(token).GET(fmt.Sprintf("/v1/recipes/%d", rec.Recipe.ID)).
+			Expect(t).Status(http.StatusOK).JSON().Object().Value("recipe").Object()
+
+		res.Value("id").Number().Equal(rec.Recipe.ID)
+		res.NotContainsKey("coffee")
+		res.NotContainsKey("grinder")
+		res.Value("info").Object().NotEmpty()
+	})
+
+	t.Run("Get one recipe return an error if it does not exist", func(t *testing.T) {
+		app.Client(token).GET("/v1/recipes/99999").
+			Expect(t).Status(http.StatusNotFound).JSON().Object().
+			Value("error").String().Equal("the requested recipe could not be found")
+	})
+
+	t.Run("Get one recipe returns an error if the user does not own one", func(t *testing.T) {
+		recipe := app.Factory.CreateRecipe(t, token, 1, testutils.ValidV60Recipe())
+		otherUser := app.Factory.CreateUser(t)
+		otherToken := app.Factory.Login(t, otherUser.Email, otherUser.Password)
+		app.Client(otherToken).GET(fmt.Sprintf("/v1/recipes/%d", recipe.Recipe.ID)).
+			Expect(t).Status(http.StatusNotFound).JSON().Object().
+			Value("error").String().Equal("the requested recipe could not be found")
+	})
+}
+
+func TestDeleteRecipe(t *testing.T) {
+	app := testutils.NewTestApp(t)
+	user := app.Factory.CreateUser(t)
+	token := app.Factory.Login(t, user.Email, user.Password)
+
+	t.Run("DELETE recipe successfully deletes a recipe", func(t *testing.T) {
+		recipe := app.Factory.CreateRecipe(t, token, 1, testutils.ValidV60Recipe())
+		app.Client(token).GET(fmt.Sprintf("/v1/recipes/%d", recipe.Recipe.ID)).Expect(t).Status(http.StatusOK)
+		app.Client(token).DELETE(fmt.Sprintf("/v1/recipes/%d", recipe.Recipe.ID)).Expect(t).Status(http.StatusOK).
+			JSON().Object().Value("message").String().Contains("deleted")
+		app.Client(token).GET(fmt.Sprintf("/v1/recipes/%d", recipe.Recipe.ID)).Expect(t).Status(http.StatusNotFound)
+	})
+
+	t.Run("DELETE recipe that is not found returns an error", func(t *testing.T) {
+		app.Client(token).DELETE("/v1/recipes/99999").Expect(t).Status(http.StatusNotFound).
+			JSON().Object().Value("error").String().Equal("the requested recipe could not be found")
+	})
+
+	t.Run("DELETE recipe that you do not own returns an error", func(t *testing.T) {
+		recipe := app.Factory.CreateRecipe(t, token, 1, testutils.ValidV60Recipe())
+		otherUser := app.Factory.CreateUser(t)
+		otherToken := app.Factory.Login(t, otherUser.Email, otherUser.Password)
+		app.Client(otherToken).DELETE(fmt.Sprintf("/v1/recipes/%d", recipe.Recipe.ID)).Expect(t).Status(http.StatusNotFound)
+	})
+
+	t.Run("DELETE recipe when you are not logged in returns an error", func(t *testing.T) {
+		recipe := app.Factory.CreateRecipe(t, token, 1, testutils.ValidV60Recipe())
+		app.Client("").DELETE(fmt.Sprintf("/v1/recipes/%d", recipe.Recipe.ID)).Expect(t).Status(http.StatusUnauthorized)
 	})
 }

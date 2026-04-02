@@ -231,6 +231,93 @@ func (app *application) listRecipesHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+func (app *application) getOneRecipeHandler(w http.ResponseWriter, r *http.Request) {
+	user := app.contextGetUser(r)
+
+	id, err := app.readIDParam(r)
+	if err != nil {
+		app.notFoundResponse(w, r)
+		return
+	}
+
+	recipe, err := app.models.Recipes.Get(id, user.ID)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.unknownRecipeResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	method, err := app.models.Methods.GetOne(recipe.MethodID)
+	if err != nil {
+		app.unknownMethodResponse(w, r)
+		return
+	}
+
+	var coffee *data.Coffee
+
+	if recipe.CoffeeID != nil {
+		coffee, err = app.models.Coffees.GetOne(*recipe.CoffeeID, recipe.UserID)
+		if err != nil {
+			switch {
+			case errors.Is(err, data.ErrRecordNotFound):
+				app.unknownCoffeeResponse(w, r)
+			default:
+				app.serverErrorResponse(w, r, err)
+			}
+			return
+		}
+
+		if coffee != nil && coffee.Info.Img != "" {
+			// pre-sign the image url
+			imgURL, err := s3.PreSignURL(
+				s3.WithPresigner(app.s3.Presigner),
+				s3.WithPresignBucket(app.config.s3.bucket),
+				s3.WithPresignFilePath("coffees/"+coffee.Info.Img),
+				s3.WithPresignExpiration(time.Hour*24),
+			)
+			if err != nil {
+				app.serverErrorResponse(w, r, err)
+				return
+			}
+			coffee.Info.Img = imgURL
+		}
+	}
+
+	var grinder *data.Grinder
+	if recipe.GrinderID != nil {
+		grinder, err = app.models.Grinders.GetOne(*recipe.GrinderID, user.ID)
+		if err != nil {
+			switch {
+			case errors.Is(err, data.ErrRecordNotFound):
+				app.unknownGrinderResponse(w, r)
+			default:
+				app.serverErrorResponse(w, r, err)
+			}
+			return
+		}
+	}
+
+	fullRecipe := &data.FullRecipe{
+		ID:        recipe.ID,
+		UserID:    recipe.UserID,
+		Method:    *method,
+		Coffee:    coffee,
+		Grinder:   grinder,
+		Info:      recipe.Info,
+		CreatedAt: recipe.CreatedAt,
+		Version:   recipe.Version,
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"recipe": fullRecipe}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
 func (app *application) updateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	user := app.contextGetUser(r)
 
