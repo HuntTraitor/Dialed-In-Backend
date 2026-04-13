@@ -11,6 +11,49 @@ type Filters struct {
 	SortSafelist []string
 }
 
+type CoffeeFilters struct {
+	Name         string
+	Roaster      string
+	Region       string
+	Process      string
+	Variety      string
+	OriginType   []string
+	RoastLevel   []string
+	Decaf        *bool
+	Rating       []string
+	TastingNotes []string
+	MinCost      *float64
+	MaxCost      *float64
+	Filters
+}
+
+var CoffeeSafeSortList = []string{
+	"name",
+	"roaster",
+	"region",
+	"process",
+	"variety",
+	"origin_type",
+	"roast_level",
+	"decaf",
+	"rating",
+	"tasting_notes",
+	"min_cost",
+	"max_cost",
+	"cost",
+	"-cost",
+	"-name",
+	"-roaster",
+	"-region",
+	"-process",
+	"-variety",
+	"-origin_type",
+	"-roast_level",
+	"-decaf",
+	"-rating",
+	"-tasting_notes",
+}
+
 type MetaData struct {
 	CurrentPage  int `json:"current_page,omitempty"`
 	PageSize     int `json:"page_size,omitempty"`

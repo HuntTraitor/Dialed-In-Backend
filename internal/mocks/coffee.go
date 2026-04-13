@@ -37,7 +37,7 @@ var MockEmptyCoffee = data.Coffee{
 	},
 }
 
-func (m MockCoffeeModel) GetAllForUser(userID int64) ([]*data.Coffee, error) {
+func (m MockCoffeeModel) GetAllForUser(userID int64, filters data.CoffeeFilters) ([]*data.Coffee, error) {
 	mockCoffees := []*data.Coffee{
 		{
 			ID:        1,

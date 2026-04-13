@@ -5,9 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-playground/form"
-	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -16,6 +13,10 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/form"
+	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 )
 
 type envelope map[string]any
@@ -150,6 +151,38 @@ func (app *application) readInt(qs url.Values, key string, defaultValue int, v *
 		return defaultValue
 	}
 	return i
+}
+
+// readBool returns a boolean from a query parameter
+func (app *application) readBool(qs url.Values, key string, v *validator.Validator) *bool {
+	s := qs.Get(key)
+	if s == "" {
+		return nil
+	}
+
+	b, err := strconv.ParseBool(s)
+	if err != nil {
+		v.AddError(key, "must be a boolean")
+		return nil
+	}
+
+	return &b
+}
+
+// readFloat returns a float from a query parameter
+func (app *application) readFloat(qs url.Values, key string, v *validator.Validator) *float64 {
+	s := qs.Get(key)
+	if s == "" {
+		return nil
+	}
+
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		v.AddError(key, "must be a number")
+		return nil
+	}
+
+	return &f
 }
 
 // readMultipart reads and decodes multipart form data into dst

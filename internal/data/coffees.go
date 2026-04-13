@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
+	"github.com/lib/pq"
 )
 
 type Coffee struct {
@@ -40,7 +41,7 @@ type CoffeeModel struct {
 }
 
 type CoffeeModelInterface interface {
-	GetAllForUser(userID int64) ([]*Coffee, error)
+	GetAllForUser(userID int64, filters CoffeeFilters) ([]*Coffee, error)
 	Insert(coffee *Coffee) error
 	GetOne(id int64, userId int64) (*Coffee, error)
 	Update(coffee *Coffee) error
@@ -67,12 +68,73 @@ func ValidateCoffee(v *validator.Validator, coffee *Coffee) {
 	}
 }
 
-func (m CoffeeModel) GetAllForUser(userID int64) ([]*Coffee, error) {
-	query := `SELECT * FROM coffees WHERE user_id = $1`
+func (m CoffeeModel) GetAllForUser(userID int64, filters CoffeeFilters) ([]*Coffee, error) {
+	query := `SELECT * FROM coffees
+		WHERE user_id = $1
+		
+		-- Text search
+		AND (info->>'name'    ILIKE '%' || $2 || '%' OR $2 = '')
+		AND (info->>'roaster' ILIKE '%' || $3 || '%' OR $3 = '')
+		AND (info->>'region'  ILIKE '%' || $4 || '%' OR $4 = '')
+		AND (info->>'variety' ILIKE '%' || $5 || '%' OR $5 = '')
+	
+	-- Multi-select filters
+		AND (
+		  cardinality($6::int[]) = 0
+		  OR ((info->>'rating')::int = ANY($6::int[]))
+		)
+		AND (
+		  cardinality($7::text[]) = 0
+		  OR lower(info->>'origin_type') = ANY(
+			ARRAY(SELECT lower(x) FROM unnest($7::text[]) AS x)
+		  )
+		)
+		AND (
+		  cardinality($8::text[]) = 0
+		  OR lower(info->>'roast_level') = ANY(
+			ARRAY(SELECT lower(x) FROM unnest($8::text[]) AS x)
+		  )
+		)
+	
+	-- Boolean filter
+		AND ($9::boolean IS NULL OR NULLIF(info->>'decaf', '')::boolean = $9::boolean)
+	
+	-- tasting notes filter
+		AND (
+			cardinality($10::text[]) = 0
+				OR EXISTS (
+					SELECT 1
+					FROM jsonb_array_elements_text(info->'tasting_notes') AS note
+					WHERE lower(note) = ANY(
+					SELECT lower(x) FROM unnest($10::text[]) AS x
+				)
+			)
+		)
+	
+	-- Range filters
+		AND ($11::numeric IS NULL OR NULLIF(info->>'cost', '')::numeric >= $11::numeric)
+		AND ($12::numeric IS NULL OR NULLIF(info->>'cost', '')::numeric <= $12::numeric)
+		
+		ORDER BY id;`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	rows, err := m.DB.QueryContext(ctx, query, userID)
+	rows, err := m.DB.QueryContext(
+		ctx,
+		query,
+		userID,                         // $1
+		filters.Name,                   // $2
+		filters.Roaster,                // $3
+		filters.Region,                 // $4
+		filters.Variety,                // $5
+		pq.Array(filters.Rating),       // $6
+		pq.Array(filters.OriginType),   // $7
+		pq.Array(filters.RoastLevel),   // $8
+		filters.Decaf,                  // $9
+		pq.Array(filters.TastingNotes), // $10
+		filters.MinCost,                // $11
+		filters.MaxCost,                // $12
+	)
 	if err != nil {
 		return nil, err
 	}

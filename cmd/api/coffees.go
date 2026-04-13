@@ -15,7 +15,39 @@ import (
 
 func (app *application) listCoffeesHandler(w http.ResponseWriter, r *http.Request) {
 	user := app.contextGetUser(r)
-	coffees, err := app.models.Coffees.GetAllForUser(user.ID)
+
+	var input struct {
+		data.CoffeeFilters
+	}
+
+	v := validator.New()
+	qs := r.URL.Query()
+
+	input.CoffeeFilters.Name = app.readString(qs, "name", "")
+	input.CoffeeFilters.Roaster = app.readString(qs, "roaster", "")
+	input.CoffeeFilters.Region = app.readString(qs, "region", "")
+	input.CoffeeFilters.Process = app.readString(qs, "process", "")
+	input.CoffeeFilters.Variety = app.readString(qs, "variety", "")
+	input.CoffeeFilters.OriginType = app.readCSV(qs, "origin_type", []string{})
+	input.CoffeeFilters.RoastLevel = app.readCSV(qs, "roast_level", []string{})
+	input.CoffeeFilters.Decaf = app.readBool(qs, "decaf", v)
+	input.CoffeeFilters.Rating = app.readCSV(qs, "rating", []string{})
+	input.CoffeeFilters.TastingNotes = app.readCSV(qs, "tasting_notes", []string{})
+	input.CoffeeFilters.MinCost = app.readFloat(qs, "min_cost", v)
+	input.CoffeeFilters.MaxCost = app.readFloat(qs, "max_cost", v)
+
+	input.CoffeeFilters.Filters.Page = app.readInt(qs, "page", 1, v)
+	input.CoffeeFilters.Filters.PageSize = app.readInt(qs, "page_size", 20, v)
+	input.CoffeeFilters.Filters.Sort = app.readString(qs, "sort", "name")
+
+	input.CoffeeFilters.Filters.SortSafelist = data.CoffeeSafeSortList
+
+	if data.ValidateFilters(v, input.Filters); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	coffees, err := app.models.Coffees.GetAllForUser(user.ID, input.CoffeeFilters)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
