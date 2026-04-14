@@ -69,6 +69,7 @@ func ValidateCoffee(v *validator.Validator, coffee *Coffee) {
 }
 
 func (m CoffeeModel) GetAllForUser(userID int64, filters CoffeeFilters) ([]*Coffee, error) {
+	fmt.Println(filters.Name)
 	query := `SELECT * FROM coffees
 		WHERE user_id = $1
 		
@@ -77,43 +78,44 @@ func (m CoffeeModel) GetAllForUser(userID int64, filters CoffeeFilters) ([]*Coff
 		AND (info->>'roaster' ILIKE '%' || $3 || '%' OR $3 = '')
 		AND (info->>'region'  ILIKE '%' || $4 || '%' OR $4 = '')
 		AND (info->>'variety' ILIKE '%' || $5 || '%' OR $5 = '')
+		AND (info->>'process' ILIKE '%' || $6 || '%' OR $6 = '')
 	
 	-- Multi-select filters
 		AND (
-		  cardinality($6::int[]) = 0
-		  OR ((info->>'rating')::int = ANY($6::int[]))
-		)
-		AND (
-		  cardinality($7::text[]) = 0
-		  OR lower(info->>'origin_type') = ANY(
-			ARRAY(SELECT lower(x) FROM unnest($7::text[]) AS x)
-		  )
+		  cardinality($7::int[]) = 0
+		  OR ((info->>'rating')::int = ANY($7::int[]))
 		)
 		AND (
 		  cardinality($8::text[]) = 0
-		  OR lower(info->>'roast_level') = ANY(
+		  OR lower(info->>'origin_type') = ANY(
 			ARRAY(SELECT lower(x) FROM unnest($8::text[]) AS x)
+		  )
+		)
+		AND (
+		  cardinality($9::text[]) = 0
+		  OR lower(info->>'roast_level') = ANY(
+			ARRAY(SELECT lower(x) FROM unnest($9::text[]) AS x)
 		  )
 		)
 	
 	-- Boolean filter
-		AND ($9::boolean IS NULL OR NULLIF(info->>'decaf', '')::boolean = $9::boolean)
+		AND ($10::boolean IS NULL OR NULLIF(info->>'decaf', '')::boolean = $10::boolean)
 	
 	-- tasting notes filter
 		AND (
-			cardinality($10::text[]) = 0
+			cardinality($11::text[]) = 0
 				OR EXISTS (
 					SELECT 1
 					FROM jsonb_array_elements_text(info->'tasting_notes') AS note
 					WHERE lower(note) = ANY(
-					SELECT lower(x) FROM unnest($10::text[]) AS x
+					SELECT lower(x) FROM unnest($11::text[]) AS x
 				)
 			)
 		)
 	
 	-- Range filters
-		AND ($11::numeric IS NULL OR NULLIF(info->>'cost', '')::numeric >= $11::numeric)
-		AND ($12::numeric IS NULL OR NULLIF(info->>'cost', '')::numeric <= $12::numeric)
+		AND ($12::numeric IS NULL OR NULLIF(info->>'cost', '')::numeric >= $12::numeric)
+		AND ($13::numeric IS NULL OR NULLIF(info->>'cost', '')::numeric <= $13::numeric)
 		
 		ORDER BY id;`
 
@@ -127,13 +129,14 @@ func (m CoffeeModel) GetAllForUser(userID int64, filters CoffeeFilters) ([]*Coff
 		filters.Roaster,                // $3
 		filters.Region,                 // $4
 		filters.Variety,                // $5
-		pq.Array(filters.Rating),       // $6
-		pq.Array(filters.OriginType),   // $7
-		pq.Array(filters.RoastLevel),   // $8
-		filters.Decaf,                  // $9
-		pq.Array(filters.TastingNotes), // $10
-		filters.MinCost,                // $11
-		filters.MaxCost,                // $12
+		filters.Process,                // $6
+		pq.Array(filters.Rating),       // $7
+		pq.Array(filters.OriginType),   // $8
+		pq.Array(filters.RoastLevel),   // $9
+		filters.Decaf,                  // $10
+		pq.Array(filters.TastingNotes), // $11
+		filters.MinCost,                // $12
+		filters.MaxCost,                // $13
 	)
 	if err != nil {
 		return nil, err

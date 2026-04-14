@@ -63,6 +63,17 @@ type RequestBuilder struct {
 	json        any
 	form        *CoffeeForm
 	extraFields map[string]string
+	query       []queryParam
+}
+
+type queryParam struct {
+	key   string
+	value string
+}
+
+func (r *RequestBuilder) WithQuery(key, value string) *RequestBuilder {
+	r.query = append(r.query, queryParam{key: key, value: value})
+	return r
 }
 
 func (r *RequestBuilder) Expect(t *testing.T) *httpexpect.Response {
@@ -98,6 +109,9 @@ func (r *RequestBuilder) Expect(t *testing.T) *httpexpect.Response {
 
 	if r.form != nil {
 		req = applyCoffeeMultipart(req, *r.form, r.extraFields)
+	}
+	for _, q := range r.query {
+		req = req.WithQuery(q.key, q.value)
 	}
 
 	return req.Expect()

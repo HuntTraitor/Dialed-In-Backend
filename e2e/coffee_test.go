@@ -57,6 +57,72 @@ func TestGetAllCoffees(t *testing.T) {
 		}
 	})
 
+	t.Run("Successfully applies all coffee filters in one query", func(t *testing.T) {
+		target := testutils.ValidCoffeeForm()
+		target.Name = "Blueberry Smoothie Bomb"
+		target.Roaster = "Roasters Lab Collective"
+		target.Region = "Yirgacheffe Chelbesa"
+		target.Process = "Honey Anaerobic"
+		target.Description = "Juicy cup with loud fruit sweetness"
+		target.OriginType = "Single Origin"
+		target.TastingNotes = []string{"Blueberry Smoothie", "Jasmine Blossom", "Molasses"}
+		target.Rating = 5
+		target.RoastLevel = "Light"
+		target.Cost = 27.75
+		target.Decaf = false
+		target.Variety = "Heirloom 74110"
+
+		targetCoffee := app.Factory.CreateCoffee(t, token, target)
+
+		decoy := testutils.ValidCoffeeForm()
+		decoy.Name = "Blueberry Smoothie Decaf"
+		decoy.Roaster = "Roasters Lab Collective"
+		decoy.Region = "Yirgacheffe Chelbesa"
+		decoy.Process = "Honey Anaerobic"
+		decoy.OriginType = "Single Origin"
+		decoy.TastingNotes = []string{"Blueberry Smoothie", "Jasmine Blossom"}
+		decoy.Rating = 5
+		decoy.RoastLevel = "Light"
+		decoy.Cost = 27.75
+		decoy.Decaf = true
+		decoy.Variety = "Heirloom 74110"
+		app.Factory.CreateCoffee(t, token, decoy)
+
+		res := app.Client(token).
+			GET("/v1/coffees").
+			WithQuery("name", "Blueberry sm").
+			WithQuery("roaster", "Roasters Lab").
+			WithQuery("region", "Yirgach").
+			WithQuery("process", "Honey Anaero").
+			WithQuery("variety", "Heirloom 741").
+			WithQuery("origin_type", "blend,Single Origin,micro-lot").
+			WithQuery("roast_level", "dark,Light,medium-dark").
+			WithQuery("decaf", "false").
+			WithQuery("rating", "1,5,3").
+			WithQuery("tasting_notes", "grapefruit,BLUEBERRY SMOOTHIE,molasses").
+			WithQuery("min_cost", "27.70").
+			WithQuery("max_cost", "27.80").
+			Expect(t).
+			Status(http.StatusOK)
+		coffees := res.JSON().Object().Value("coffees").Array()
+		coffees.Length().Equal(1)
+
+		coffee := coffees.Element(0).Object()
+		coffee.Value("id").Number().Equal(targetCoffee.Coffee.ID)
+
+		info := coffee.Value("info").Object()
+		info.Value("name").String().Equal(target.Name)
+		info.Value("roaster").String().Equal(target.Roaster)
+		info.Value("region").String().Equal(target.Region)
+		info.Value("process").String().Equal(target.Process)
+		info.Value("origin_type").String().Equal(target.OriginType)
+		info.Value("roast_level").String().Equal(target.RoastLevel)
+		info.Value("rating").Number().Equal(target.Rating)
+		info.Value("decaf").Boolean().Equal(target.Decaf)
+		info.Value("cost").Number().Equal(target.Cost)
+		info.Value("variety").String().Equal(target.Variety)
+	})
+
 	t.Run("Fails to get coffees when not logged in", func(t *testing.T) {
 		app.Client("").GET("/v1/coffees").Expect(t).Status(http.StatusUnauthorized)
 	})
