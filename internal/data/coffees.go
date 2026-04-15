@@ -69,16 +69,16 @@ func ValidateCoffee(v *validator.Validator, coffee *Coffee) {
 }
 
 func (m CoffeeModel) GetAllForUser(userID int64, filters CoffeeFilters) ([]*Coffee, error) {
-	fmt.Println(filters.Name)
-	query := `SELECT * FROM coffees
+	query := fmt.Sprintf(`
+		SELECT * FROM coffees
 		WHERE user_id = $1
 		
 		-- Text search
-		AND (info->>'name'    ILIKE '%' || $2 || '%' OR $2 = '')
-		AND (info->>'roaster' ILIKE '%' || $3 || '%' OR $3 = '')
-		AND (info->>'region'  ILIKE '%' || $4 || '%' OR $4 = '')
-		AND (info->>'variety' ILIKE '%' || $5 || '%' OR $5 = '')
-		AND (info->>'process' ILIKE '%' || $6 || '%' OR $6 = '')
+		AND (info->>'name'    ILIKE '%%' || $2 || '%%' OR $2 = '')
+		AND (info->>'roaster' ILIKE '%%' || $3 || '%%' OR $3 = '')
+		AND (info->>'region'  ILIKE '%%' || $4 || '%%' OR $4 = '')
+		AND (info->>'variety' ILIKE '%%' || $5 || '%%' OR $5 = '')
+		AND (info->>'process' ILIKE '%%' || $6 || '%%' OR $6 = '')
 	
 	-- Multi-select filters
 		AND (
@@ -117,7 +117,7 @@ func (m CoffeeModel) GetAllForUser(userID int64, filters CoffeeFilters) ([]*Coff
 		AND ($12::numeric IS NULL OR NULLIF(info->>'cost', '')::numeric >= $12::numeric)
 		AND ($13::numeric IS NULL OR NULLIF(info->>'cost', '')::numeric <= $13::numeric)
 		
-		ORDER BY id;`
+		ORDER BY %s %s, id ASC;`, filters.sortColumn(), filters.sortDirection())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()

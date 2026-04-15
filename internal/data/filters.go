@@ -1,6 +1,9 @@
 package data
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 )
 
@@ -38,8 +41,6 @@ var CoffeeSafeSortList = []string{
 	"decaf",
 	"rating",
 	"tasting_notes",
-	"min_cost",
-	"max_cost",
 	"cost",
 	"-cost",
 	"-name",
@@ -71,22 +72,24 @@ func ValidateFilters(v *validator.Validator, f Filters) {
 }
 
 // sortColumn checks if the client sorted by something in our safe list and if so, extract the name from it
-//func (f Filters) sortColumn() string {
-//	for _, safeValue := range f.SortSafelist {
-//		if f.Sort == safeValue {
-//			return strings.TrimPrefix(f.Sort, "-")
-//		}
-//	}
-//	panic("unsafe sort parameter:" + f.Sort)
-//}
+func (f Filters) sortColumn() string {
+	fmt.Println(f.Sort)
+	for _, safeValue := range f.SortSafelist {
+		if f.Sort == safeValue {
+			column := strings.TrimPrefix(f.Sort, "-")
+			return "info->>'" + column + "'"
+		}
+	}
+	panic("unsafe sort parameter:" + f.Sort)
+}
 
 // sortDirection returns "ASC" or "DESC" based on the prefix character
-//func (f Filters) sortDirection() string {
-//	if strings.HasPrefix(f.Sort, "-") {
-//		return "DESC"
-//	}
-//	return "ASC"
-//}
+func (f Filters) sortDirection() string {
+	if strings.HasPrefix(f.Sort, "-") {
+		return "DESC"
+	}
+	return "ASC"
+}
 
 // limit returns the limit of the PageSize
 //func (f Filters) limit() int {

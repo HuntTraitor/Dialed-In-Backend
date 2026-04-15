@@ -20,6 +20,10 @@ func baseCoffeeFilters() CoffeeFilters {
 		OriginType:   []string{},
 		RoastLevel:   []string{},
 		TastingNotes: []string{},
+		Filters: Filters{
+			Sort:         "name",
+			SortSafelist: CoffeeSafeSortList,
+		},
 	}
 }
 
@@ -301,6 +305,209 @@ func TestGetAllCoffeeFilters(t *testing.T) {
 			name:      "max_cost filter wrong",
 			mutate:    func(f *CoffeeFilters) { f.MaxCost = float64Ptr(10.00) },
 			wantNames: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filters := baseCoffeeFilters()
+			if tt.mutate != nil {
+				tt.mutate(&filters)
+			}
+
+			got, err := coffees.GetAllForUser(user.ID, filters)
+			require.NoError(t, err)
+
+			gotNames := make([]string, 0, len(got))
+			for _, coffee := range got {
+				gotNames = append(gotNames, coffee.Info.Name)
+			}
+
+			require.Equal(t, tt.wantNames, gotNames)
+		})
+	}
+}
+
+func TestGetAllCoffeeSort(t *testing.T) {
+	db := newTestDB(t)
+	users := UserModel{db}
+	coffees := CoffeeModel{db}
+
+	user := &User{
+		Name:  "Coffee Sort Tester",
+		Email: "coffeesorttester@example.com",
+		Password: password{
+			hash: []byte("hash"),
+		},
+		Activated: true,
+	}
+	require.NoError(t, users.Insert(user))
+
+	require.NoError(t, coffees.Insert(&Coffee{
+		UserID: int(user.ID),
+		Info: CoffeeInfo{
+			Name:         "Alpha",
+			Roaster:      "Roaster A",
+			Region:       "Region A",
+			Process:      "Process A",
+			Variety:      "Variety A",
+			OriginType:   "Blend",
+			RoastLevel:   "Level A",
+			Decaf:        false,
+			Rating:       1,
+			TastingNotes: []string{"a"},
+			Cost:         10.00,
+		},
+	}))
+
+	require.NoError(t, coffees.Insert(&Coffee{
+		UserID: int(user.ID),
+		Info: CoffeeInfo{
+			Name:         "Bravo",
+			Roaster:      "Roaster B",
+			Region:       "Region B",
+			Process:      "Process B",
+			Variety:      "Variety B",
+			OriginType:   "Microlot",
+			RoastLevel:   "Level B",
+			Decaf:        false,
+			Rating:       2,
+			TastingNotes: []string{"b"},
+			Cost:         20.00,
+		},
+	}))
+
+	require.NoError(t, coffees.Insert(&Coffee{
+		UserID: int(user.ID),
+		Info: CoffeeInfo{
+			Name:         "Charlie",
+			Roaster:      "Roaster C",
+			Region:       "Region C",
+			Process:      "Process C",
+			Variety:      "Variety C",
+			OriginType:   "Single Origin",
+			RoastLevel:   "Level C",
+			Decaf:        true,
+			Rating:       3,
+			TastingNotes: []string{"c"},
+			Cost:         30.00,
+		},
+	}))
+
+	tests := []struct {
+		name      string
+		mutate    func(*CoffeeFilters)
+		wantNames []string
+	}{
+		{
+			name:      "sort name asc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "name" },
+			wantNames: []string{"Alpha", "Bravo", "Charlie"},
+		},
+		{
+			name:      "sort name desc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "-name" },
+			wantNames: []string{"Charlie", "Bravo", "Alpha"},
+		},
+		{
+			name:      "sort roaster asc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "roaster" },
+			wantNames: []string{"Alpha", "Bravo", "Charlie"},
+		},
+		{
+			name:      "sort roaster desc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "-roaster" },
+			wantNames: []string{"Charlie", "Bravo", "Alpha"},
+		},
+		{
+			name:      "sort region asc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "region" },
+			wantNames: []string{"Alpha", "Bravo", "Charlie"},
+		},
+		{
+			name:      "sort region desc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "-region" },
+			wantNames: []string{"Charlie", "Bravo", "Alpha"},
+		},
+		{
+			name:      "sort process asc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "process" },
+			wantNames: []string{"Alpha", "Bravo", "Charlie"},
+		},
+		{
+			name:      "sort process desc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "-process" },
+			wantNames: []string{"Charlie", "Bravo", "Alpha"},
+		},
+		{
+			name:      "sort variety asc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "variety" },
+			wantNames: []string{"Alpha", "Bravo", "Charlie"},
+		},
+		{
+			name:      "sort variety desc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "-variety" },
+			wantNames: []string{"Charlie", "Bravo", "Alpha"},
+		},
+		{
+			name:      "sort origin_type asc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "origin_type" },
+			wantNames: []string{"Alpha", "Bravo", "Charlie"},
+		},
+		{
+			name:      "sort origin_type desc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "-origin_type" },
+			wantNames: []string{"Charlie", "Bravo", "Alpha"},
+		},
+		{
+			name:      "sort roast_level asc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "roast_level" },
+			wantNames: []string{"Alpha", "Bravo", "Charlie"},
+		},
+		{
+			name:      "sort roast_level desc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "-roast_level" },
+			wantNames: []string{"Charlie", "Bravo", "Alpha"},
+		},
+		{
+			name:      "sort decaf asc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "decaf" },
+			wantNames: []string{"Alpha", "Bravo", "Charlie"},
+		},
+		{
+			name:      "sort decaf desc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "-decaf" },
+			wantNames: []string{"Charlie", "Alpha", "Bravo"},
+		},
+		{
+			name:      "sort rating asc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "rating" },
+			wantNames: []string{"Alpha", "Bravo", "Charlie"},
+		},
+		{
+			name:      "sort rating desc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "-rating" },
+			wantNames: []string{"Charlie", "Bravo", "Alpha"},
+		},
+		{
+			name:      "sort tasting_notes asc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "tasting_notes" },
+			wantNames: []string{"Alpha", "Bravo", "Charlie"},
+		},
+		{
+			name:      "sort tasting_notes desc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "-tasting_notes" },
+			wantNames: []string{"Charlie", "Bravo", "Alpha"},
+		},
+		{
+			name:      "sort cost asc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "cost" },
+			wantNames: []string{"Alpha", "Bravo", "Charlie"},
+		},
+		{
+			name:      "sort cost desc",
+			mutate:    func(f *CoffeeFilters) { f.Sort = "-cost" },
+			wantNames: []string{"Charlie", "Bravo", "Alpha"},
 		},
 	}
 

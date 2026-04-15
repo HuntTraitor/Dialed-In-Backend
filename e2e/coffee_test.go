@@ -128,6 +128,50 @@ func TestGetAllCoffees(t *testing.T) {
 	})
 }
 
+func TestGetAllCoffeesSort(t *testing.T) {
+	t.Run("Successfully sorts coffees by sort value", func(t *testing.T) {
+		app := testutils.NewTestApp(t)
+		user := app.Factory.CreateUser(t)
+		token := app.Factory.Login(t, user.Email, user.Password)
+
+		alpha := testutils.ValidCoffeeForm()
+		alpha.Name = "SortCase Alpha"
+		alpha.Rating = 1
+		app.Factory.CreateCoffee(t, token, alpha)
+
+		bravo := testutils.ValidCoffeeForm()
+		bravo.Name = "SortCase Bravo"
+		bravo.Rating = 5
+		app.Factory.CreateCoffee(t, token, bravo)
+
+		res := app.Client(token).
+			GET("/v1/coffees").
+			WithQuery("name", "SortCase").
+			WithQuery("sort", "-rating").
+			Expect(t).
+			Status(http.StatusOK)
+
+		coffees := res.JSON().Object().Value("coffees").Array()
+		coffees.Length().Equal(2)
+		coffees.Element(0).Object().Path("$.info.name").String().Equal("SortCase Bravo")
+		coffees.Element(1).Object().Path("$.info.name").String().Equal("SortCase Alpha")
+	})
+
+	t.Run("Fails when sort value is invalid", func(t *testing.T) {
+		app := testutils.NewTestApp(t)
+		user := app.Factory.CreateUser(t)
+		token := app.Factory.Login(t, user.Email, user.Password)
+
+		app.Client(token).
+			GET("/v1/coffees").
+			WithQuery("sort", "not-a-real-sort").
+			Expect(t).
+			Status(http.StatusUnprocessableEntity).
+			JSON().Object().
+			Path("$.error.sort").String().Equal("invalid sort value")
+	})
+}
+
 func TestGetOneCoffee(t *testing.T) {
 	app := testutils.NewTestApp(t)
 
