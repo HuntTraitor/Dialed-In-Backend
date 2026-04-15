@@ -7,6 +7,11 @@ import (
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
 )
 
+const (
+	DEFAULT_PAGE_SIZE = 10
+	DEFAULT_PAGE      = 1
+)
+
 type Filters struct {
 	Page         int
 	PageSize     int
@@ -92,14 +97,14 @@ func (f Filters) sortDirection() string {
 }
 
 // limit returns the limit of the PageSize
-//func (f Filters) limit() int {
-//	return f.PageSize
-//}
+func (f Filters) limit() int {
+	return f.PageSize
+}
 
 // offset returns the offset of the PageSize
-//func (f Filters) offset() int {
-//	return (f.Page - 1) * f.PageSize
-//}
+func (f Filters) offset() int {
+	return (f.Page - 1) * f.PageSize
+}
 
 // calculateMetadata calculates page and record information about the data retrieved
 //func calculateMetadata(totalRecords, page, pageSize int) MetaData {

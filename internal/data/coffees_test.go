@@ -23,6 +23,8 @@ func baseCoffeeFilters() CoffeeFilters {
 		Filters: Filters{
 			Sort:         "name",
 			SortSafelist: CoffeeSafeSortList,
+			Page:         DEFAULT_PAGE,
+			PageSize:     DEFAULT_PAGE_SIZE,
 		},
 	}
 }

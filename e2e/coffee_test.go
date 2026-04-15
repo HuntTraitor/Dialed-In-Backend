@@ -172,6 +172,115 @@ func TestGetAllCoffeesSort(t *testing.T) {
 	})
 }
 
+func TestGetAllCoffeesPagination(t *testing.T) {
+	app := testutils.NewTestApp(t)
+	user := app.Factory.CreateUser(t)
+	token := app.Factory.Login(t, user.Email, user.Password)
+	for i := 0; i < 11; i++ {
+		app.Factory.CreateCoffee(t, token, testutils.ValidCoffeeForm())
+	}
+
+	tests := []struct {
+		name   string
+		mutate func(*testutils.RequestBuilder)
+		assert func(*httpexpect.Response)
+	}{
+		{
+			name: "No pagination counter defaults to 10 pages",
+			mutate: func(req *testutils.RequestBuilder) {
+			},
+			assert: func(res *httpexpect.Response) {
+				res.Status(http.StatusOK).
+					JSON().Object().
+					Value("coffees").Array().
+					Length().Equal(10)
+			},
+		},
+		{
+			name: "Pagination set to 11 pages",
+			mutate: func(req *testutils.RequestBuilder) {
+				req.WithQuery("page_size", "11")
+			},
+			assert: func(res *httpexpect.Response) {
+				res.Status(http.StatusOK).
+					JSON().Object().
+					Value("coffees").Array().
+					Length().Equal(11)
+			},
+		},
+		{
+			name: "Pagination page number correctly gives values",
+			mutate: func(req *testutils.RequestBuilder) {
+				req.WithQuery("page_size", "10")
+				req.WithQuery("page", "2")
+			},
+			assert: func(res *httpexpect.Response) {
+				res.Status(http.StatusOK).
+					JSON().Object().
+					Value("coffees").Array().
+					Length().Equal(1)
+			},
+		},
+		{
+			name: "Pagination page number too high returns empty values",
+			mutate: func(req *testutils.RequestBuilder) {
+				req.WithQuery("page", "10000")
+			},
+			assert: func(res *httpexpect.Response) {
+				res.Status(http.StatusOK).
+					JSON().Object().
+					Value("coffees").Array().
+					Length().Equal(0)
+			},
+		},
+		{
+			name: "Pagination page number negative returns error",
+			mutate: func(req *testutils.RequestBuilder) {
+				req.WithQuery("page", "-1")
+			},
+			assert: func(res *httpexpect.Response) {
+				res.Status(http.StatusUnprocessableEntity).
+					JSON().Object().
+					Path("$.error.page").String().
+					Contains("greater than zero")
+			},
+		},
+		{
+			name: "Pagination page size too high returns error",
+			mutate: func(req *testutils.RequestBuilder) {
+				req.WithQuery("page_size", "10000")
+			},
+			assert: func(res *httpexpect.Response) {
+				res.Status(http.StatusUnprocessableEntity).
+					JSON().Object().
+					Path("$.error.page_size").String().
+					Contains("maximum")
+			},
+		},
+		{
+			name: "Pagination page size too low returns error",
+			mutate: func(req *testutils.RequestBuilder) {
+				req.WithQuery("page_size", "-1")
+			},
+			assert: func(res *httpexpect.Response) {
+				res.Status(http.StatusUnprocessableEntity).
+					JSON().Object().
+					Path("$.error.page_size").String().
+					Contains("maximum")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := app.Client(token).GET("/v1/coffees")
+			tt.mutate(req)
+			res := req.Expect(t)
+			tt.assert(res)
+		})
+	}
+}
+
 func TestGetOneCoffee(t *testing.T) {
 	app := testutils.NewTestApp(t)
 

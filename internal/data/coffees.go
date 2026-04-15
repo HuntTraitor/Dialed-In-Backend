@@ -117,13 +117,13 @@ func (m CoffeeModel) GetAllForUser(userID int64, filters CoffeeFilters) ([]*Coff
 		AND ($12::numeric IS NULL OR NULLIF(info->>'cost', '')::numeric >= $12::numeric)
 		AND ($13::numeric IS NULL OR NULLIF(info->>'cost', '')::numeric <= $13::numeric)
 		
-		ORDER BY %s %s, id ASC;`, filters.sortColumn(), filters.sortDirection())
+		ORDER BY %s %s, id ASC
+		LIMIT $14 OFFSET $15;`, filters.sortColumn(), filters.sortDirection())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	rows, err := m.DB.QueryContext(
-		ctx,
-		query,
+
+	args := []any{
 		userID,                         // $1
 		filters.Name,                   // $2
 		filters.Roaster,                // $3
@@ -137,7 +137,11 @@ func (m CoffeeModel) GetAllForUser(userID int64, filters CoffeeFilters) ([]*Coff
 		pq.Array(filters.TastingNotes), // $11
 		filters.MinCost,                // $12
 		filters.MaxCost,                // $13
-	)
+		filters.limit(),                // $14
+		filters.offset(),               // $15
+	}
+
+	rows, err := m.DB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

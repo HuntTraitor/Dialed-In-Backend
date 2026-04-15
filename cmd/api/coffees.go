@@ -36,8 +36,8 @@ func (app *application) listCoffeesHandler(w http.ResponseWriter, r *http.Reques
 	input.CoffeeFilters.MinCost = app.readFloat(qs, "min_cost", v)
 	input.CoffeeFilters.MaxCost = app.readFloat(qs, "max_cost", v)
 
-	input.CoffeeFilters.Filters.Page = app.readInt(qs, "page", 1, v)
-	input.CoffeeFilters.Filters.PageSize = app.readInt(qs, "page_size", 20, v)
+	input.CoffeeFilters.Filters.Page = app.readInt(qs, "page", data.DEFAULT_PAGE, v)
+	input.CoffeeFilters.Filters.PageSize = app.readInt(qs, "page_size", data.DEFAULT_PAGE_SIZE, v)
 	input.CoffeeFilters.Filters.Sort = app.readString(qs, "sort", "name")
 
 	input.CoffeeFilters.Filters.SortSafelist = data.CoffeeSafeSortList
