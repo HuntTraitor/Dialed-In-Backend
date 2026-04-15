@@ -37,7 +37,7 @@ var MockEmptyCoffee = data.Coffee{
 	},
 }
 
-func (m MockCoffeeModel) GetAllForUser(userID int64, filters data.CoffeeFilters) ([]*data.Coffee, error) {
+func (m MockCoffeeModel) GetAllForUser(userID int64, filters data.CoffeeFilters) ([]*data.Coffee, data.MetaData, error) {
 	mockCoffees := []*data.Coffee{
 		{
 			ID:        1,
@@ -78,7 +78,15 @@ func (m MockCoffeeModel) GetAllForUser(userID int64, filters data.CoffeeFilters)
 			},
 		},
 	}
-	return mockCoffees, nil
+
+	mockMetaData := data.MetaData{
+		CurrentPage:  1,
+		PageSize:     10,
+		FirstPage:    1,
+		LastPage:     1,
+		TotalRecords: 2,
+	}
+	return mockCoffees, mockMetaData, nil
 }
 
 func (m MockCoffeeModel) Insert(coffee *data.Coffee) error {

@@ -61,11 +61,11 @@ var CoffeeSafeSortList = []string{
 }
 
 type MetaData struct {
-	CurrentPage  int `json:"current_page,omitempty"`
-	PageSize     int `json:"page_size,omitempty"`
-	FirstPage    int `json:"first_page,omitempty"`
-	LastPage     int `json:"last_page,omitempty"`
-	TotalRecords int `json:"total_records,omitempty"`
+	CurrentPage  int `json:"current_page,omitzero"`
+	PageSize     int `json:"page_size,omitzero"`
+	FirstPage    int `json:"first_page,omitzero"`
+	LastPage     int `json:"last_page,omitzero"`
+	TotalRecords int `json:"total_records,omitzero"`
 }
 
 func ValidateFilters(v *validator.Validator, f Filters) {
@@ -107,15 +107,15 @@ func (f Filters) offset() int {
 }
 
 // calculateMetadata calculates page and record information about the data retrieved
-//func calculateMetadata(totalRecords, page, pageSize int) MetaData {
-//	if totalRecords == 0 {
-//		return MetaData{}
-//	}
-//	return MetaData{
-//		CurrentPage:  page,
-//		PageSize:     pageSize,
-//		FirstPage:    1,
-//		LastPage:     (totalRecords + pageSize - 1) / pageSize,
-//		TotalRecords: totalRecords,
-//	}
-//}
+func calculateMetadata(totalRecords, page, pageSize int) MetaData {
+	if totalRecords == 0 {
+		return MetaData{}
+	}
+	return MetaData{
+		CurrentPage:  page,
+		PageSize:     pageSize,
+		FirstPage:    1,
+		LastPage:     (totalRecords + pageSize - 1) / pageSize,
+		TotalRecords: totalRecords,
+	}
+}

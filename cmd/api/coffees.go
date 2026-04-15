@@ -47,7 +47,7 @@ func (app *application) listCoffeesHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	coffees, err := app.models.Coffees.GetAllForUser(user.ID, input.CoffeeFilters)
+	coffees, metadata, err := app.models.Coffees.GetAllForUser(user.ID, input.CoffeeFilters)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -69,7 +69,7 @@ func (app *application) listCoffeesHandler(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	err = app.writeJSON(w, http.StatusOK, envelope{"coffees": coffees}, nil)
+	err = app.writeJSON(w, http.StatusOK, envelope{"metadata": metadata, "coffees": coffees}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}

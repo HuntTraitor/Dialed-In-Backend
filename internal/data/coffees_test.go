@@ -317,7 +317,7 @@ func TestGetAllCoffeeFilters(t *testing.T) {
 				tt.mutate(&filters)
 			}
 
-			got, err := coffees.GetAllForUser(user.ID, filters)
+			got, _, err := coffees.GetAllForUser(user.ID, filters)
 			require.NoError(t, err)
 
 			gotNames := make([]string, 0, len(got))
@@ -520,7 +520,7 @@ func TestGetAllCoffeeSort(t *testing.T) {
 				tt.mutate(&filters)
 			}
 
-			got, err := coffees.GetAllForUser(user.ID, filters)
+			got, _, err := coffees.GetAllForUser(user.ID, filters)
 			require.NoError(t, err)
 
 			gotNames := make([]string, 0, len(got))

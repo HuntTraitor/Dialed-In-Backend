@@ -190,10 +190,14 @@ func TestGetAllCoffeesPagination(t *testing.T) {
 			mutate: func(req *testutils.RequestBuilder) {
 			},
 			assert: func(res *httpexpect.Response) {
-				res.Status(http.StatusOK).
-					JSON().Object().
-					Value("coffees").Array().
-					Length().Equal(10)
+				obj := res.Status(http.StatusOK).JSON().Object()
+				obj.Value("coffees").Array().Length().Equal(10)
+				metadata := obj.Value("metadata").Object()
+				metadata.Value("current_page").Number().Equal(1)
+				metadata.Value("page_size").Number().Equal(10)
+				metadata.Value("first_page").Number().Equal(1)
+				metadata.Value("last_page").Number().Equal(2)
+				metadata.Value("total_records").Number().Equal(11)
 			},
 		},
 		{
@@ -202,10 +206,14 @@ func TestGetAllCoffeesPagination(t *testing.T) {
 				req.WithQuery("page_size", "11")
 			},
 			assert: func(res *httpexpect.Response) {
-				res.Status(http.StatusOK).
-					JSON().Object().
-					Value("coffees").Array().
-					Length().Equal(11)
+				obj := res.Status(http.StatusOK).JSON().Object()
+				obj.Value("coffees").Array().Length().Equal(11)
+				metadata := obj.Value("metadata").Object()
+				metadata.Value("current_page").Number().Equal(1)
+				metadata.Value("page_size").Number().Equal(11)
+				metadata.Value("first_page").Number().Equal(1)
+				metadata.Value("last_page").Number().Equal(1)
+				metadata.Value("total_records").Number().Equal(11)
 			},
 		},
 		{
@@ -215,10 +223,14 @@ func TestGetAllCoffeesPagination(t *testing.T) {
 				req.WithQuery("page", "2")
 			},
 			assert: func(res *httpexpect.Response) {
-				res.Status(http.StatusOK).
-					JSON().Object().
-					Value("coffees").Array().
-					Length().Equal(1)
+				obj := res.Status(http.StatusOK).JSON().Object()
+				obj.Value("coffees").Array().Length().Equal(1)
+				metadata := obj.Value("metadata").Object()
+				metadata.Value("current_page").Number().Equal(2)
+				metadata.Value("page_size").Number().Equal(10)
+				metadata.Value("first_page").Number().Equal(1)
+				metadata.Value("last_page").Number().Equal(2)
+				metadata.Value("total_records").Number().Equal(11)
 			},
 		},
 		{
@@ -227,10 +239,9 @@ func TestGetAllCoffeesPagination(t *testing.T) {
 				req.WithQuery("page", "10000")
 			},
 			assert: func(res *httpexpect.Response) {
-				res.Status(http.StatusOK).
-					JSON().Object().
-					Value("coffees").Array().
-					Length().Equal(0)
+				obj := res.Status(http.StatusOK).JSON().Object()
+				obj.Value("coffees").Array().Length().Equal(0)
+				obj.Value("metadata").Object().Empty()
 			},
 		},
 		{

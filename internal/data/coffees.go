@@ -41,7 +41,7 @@ type CoffeeModel struct {
 }
 
 type CoffeeModelInterface interface {
-	GetAllForUser(userID int64, filters CoffeeFilters) ([]*Coffee, error)
+	GetAllForUser(userID int64, filters CoffeeFilters) ([]*Coffee, MetaData, error)
 	Insert(coffee *Coffee) error
 	GetOne(id int64, userId int64) (*Coffee, error)
 	Update(coffee *Coffee) error
@@ -68,9 +68,9 @@ func ValidateCoffee(v *validator.Validator, coffee *Coffee) {
 	}
 }
 
-func (m CoffeeModel) GetAllForUser(userID int64, filters CoffeeFilters) ([]*Coffee, error) {
+func (m CoffeeModel) GetAllForUser(userID int64, filters CoffeeFilters) ([]*Coffee, MetaData, error) {
 	query := fmt.Sprintf(`
-		SELECT * FROM coffees
+		SELECT count(*) OVER(), * FROM coffees
 		WHERE user_id = $1
 		
 		-- Text search
@@ -143,17 +143,19 @@ func (m CoffeeModel) GetAllForUser(userID int64, filters CoffeeFilters) ([]*Coff
 
 	rows, err := m.DB.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, MetaData{}, err
 	}
 
 	defer rows.Close()
 
+	totalRecords := 0
 	coffees := []*Coffee{}
 	var infoBytes []byte
 
 	for rows.Next() {
 		var coffee Coffee
 		err = rows.Scan(
+			&totalRecords,
 			&coffee.ID,
 			&coffee.UserID,
 			&infoBytes,
@@ -161,19 +163,21 @@ func (m CoffeeModel) GetAllForUser(userID int64, filters CoffeeFilters) ([]*Coff
 			&coffee.CreatedAt,
 		)
 		if err != nil {
-			return nil, err
+			return nil, MetaData{}, err
 		}
 		err = json.Unmarshal(infoBytes, &coffee.Info)
 		if err != nil {
-			return nil, err
+			return nil, MetaData{}, err
 		}
 		coffees = append(coffees, &coffee)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, err
+		return nil, MetaData{}, err
 	}
-	return coffees, nil
+
+	metadata := calculateMetadata(totalRecords, filters.Page, filters.PageSize)
+	return coffees, metadata, nil
 }
 
 func (m CoffeeModel) Insert(coffee *Coffee) error {
