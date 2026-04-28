@@ -73,72 +73,83 @@ func (m CoffeeModel) GetAllForUser(userID int64, filters CoffeeFilters) ([]*Coff
 		SELECT count(*) OVER(), * FROM coffees
 		WHERE user_id = $1
 		
+		  -- General Search
+		AND (
+		  $2 = ''
+		  OR info->>'name'    ILIKE '%%' || $2 || '%%'
+		  OR info->>'roaster' ILIKE '%%' || $2 || '%%'
+		  OR info->>'region'  ILIKE '%%' || $2 || '%%'
+		  OR info->>'variety' ILIKE '%%' || $2 || '%%'
+		  OR info->>'process' ILIKE '%%' || $2 || '%%'
+		)
+		
 		-- Text search
-		AND (info->>'name'    ILIKE '%%' || $2 || '%%' OR $2 = '')
-		AND (info->>'roaster' ILIKE '%%' || $3 || '%%' OR $3 = '')
-		AND (info->>'region'  ILIKE '%%' || $4 || '%%' OR $4 = '')
-		AND (info->>'variety' ILIKE '%%' || $5 || '%%' OR $5 = '')
-		AND (info->>'process' ILIKE '%%' || $6 || '%%' OR $6 = '')
+		AND (info->>'name'    ILIKE '%%' || $3 || '%%' OR $3 = '')
+		AND (info->>'roaster' ILIKE '%%' || $4 || '%%' OR $4 = '')
+		AND (info->>'region'  ILIKE '%%' || $5 || '%%' OR $5 = '')
+		AND (info->>'variety' ILIKE '%%' || $6 || '%%' OR $6 = '')
+		AND (info->>'process' ILIKE '%%' || $7 || '%%' OR $7 = '')
 	
 	-- Multi-select filters
 		AND (
-		  cardinality($7::int[]) = 0
-		  OR ((info->>'rating')::int = ANY($7::int[]))
-		)
-		AND (
-		  cardinality($8::text[]) = 0
-		  OR lower(info->>'origin_type') = ANY(
-			ARRAY(SELECT lower(x) FROM unnest($8::text[]) AS x)
-		  )
+		  cardinality($8::int[]) = 0
+		  OR ((info->>'rating')::int = ANY($8::int[]))
 		)
 		AND (
 		  cardinality($9::text[]) = 0
-		  OR lower(info->>'roast_level') = ANY(
+		  OR lower(info->>'origin_type') = ANY(
 			ARRAY(SELECT lower(x) FROM unnest($9::text[]) AS x)
+		  )
+		)
+		AND (
+		  cardinality($10::text[]) = 0
+		  OR lower(info->>'roast_level') = ANY(
+			ARRAY(SELECT lower(x) FROM unnest($10::text[]) AS x)
 		  )
 		)
 	
 	-- Boolean filter
-		AND ($10::boolean IS NULL OR NULLIF(info->>'decaf', '')::boolean = $10::boolean)
+		AND ($11::boolean IS NULL OR NULLIF(info->>'decaf', '')::boolean = $11::boolean)
 	
 	-- tasting notes filter
 		AND (
-			cardinality($11::text[]) = 0
+			cardinality($12::text[]) = 0
 				OR EXISTS (
 					SELECT 1
 					FROM jsonb_array_elements_text(info->'tasting_notes') AS note
 					WHERE lower(note) = ANY(
-					SELECT lower(x) FROM unnest($11::text[]) AS x
+					SELECT lower(x) FROM unnest($12::text[]) AS x
 				)
 			)
 		)
 	
 	-- Range filters
-		AND ($12::numeric IS NULL OR NULLIF(info->>'cost', '')::numeric >= $12::numeric)
-		AND ($13::numeric IS NULL OR NULLIF(info->>'cost', '')::numeric <= $13::numeric)
+		AND ($13::numeric IS NULL OR NULLIF(info->>'cost', '')::numeric >= $13::numeric)
+		AND ($14::numeric IS NULL OR NULLIF(info->>'cost', '')::numeric <= $14::numeric)
 		
 		ORDER BY %s %s, id ASC
-		LIMIT $14 OFFSET $15;`, filters.sortColumn(), filters.sortDirection())
+		LIMIT $15 OFFSET $16;`, filters.sortColumn(), filters.sortDirection())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	args := []any{
 		userID,                         // $1
-		filters.Name,                   // $2
-		filters.Roaster,                // $3
-		filters.Region,                 // $4
-		filters.Variety,                // $5
-		filters.Process,                // $6
-		pq.Array(filters.Rating),       // $7
-		pq.Array(filters.OriginType),   // $8
-		pq.Array(filters.RoastLevel),   // $9
-		filters.Decaf,                  // $10
-		pq.Array(filters.TastingNotes), // $11
-		filters.MinCost,                // $12
-		filters.MaxCost,                // $13
-		filters.limit(),                // $14
-		filters.offset(),               // $15
+		filters.Search,                 // $2
+		filters.Name,                   // $3
+		filters.Roaster,                // $4
+		filters.Region,                 // $5
+		filters.Variety,                // $6
+		filters.Process,                // $7
+		pq.Array(filters.Rating),       // $8
+		pq.Array(filters.OriginType),   // $9
+		pq.Array(filters.RoastLevel),   // $10
+		filters.Decaf,                  // $11
+		pq.Array(filters.TastingNotes), // $12
+		filters.MinCost,                // $13
+		filters.MaxCost,                // $14
+		filters.limit(),                // $15
+		filters.offset(),               // $16
 	}
 
 	rows, err := m.DB.QueryContext(ctx, query, args...)

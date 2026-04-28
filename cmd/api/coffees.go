@@ -23,6 +23,7 @@ func (app *application) listCoffeesHandler(w http.ResponseWriter, r *http.Reques
 	v := validator.New()
 	qs := r.URL.Query()
 
+	input.CoffeeFilters.Search = app.readString(qs, "search", "")
 	input.CoffeeFilters.Name = app.readString(qs, "name", "")
 	input.CoffeeFilters.Roaster = app.readString(qs, "roaster", "")
 	input.CoffeeFilters.Region = app.readString(qs, "region", "")

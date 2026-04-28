@@ -20,6 +20,7 @@ type Filters struct {
 }
 
 type CoffeeFilters struct {
+	Search       string
 	Name         string
 	Roaster      string
 	Region       string

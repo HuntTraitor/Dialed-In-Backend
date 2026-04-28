@@ -90,6 +90,7 @@ func TestGetAllCoffees(t *testing.T) {
 
 		res := app.Client(token).
 			GET("/v1/coffees").
+			WithQuery("search", "Blueberry Smoothie").
 			WithQuery("name", "Blueberry sm").
 			WithQuery("roaster", "Roasters Lab").
 			WithQuery("region", "Yirgach").

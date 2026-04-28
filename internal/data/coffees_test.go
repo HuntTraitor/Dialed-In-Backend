@@ -115,6 +115,31 @@ func TestGetAllCoffeeFilters(t *testing.T) {
 			wantNames: []string{},
 		},
 		{
+			name:      "search filter by name",
+			mutate:    func(f *CoffeeFilters) { f.Search = "Sunrise" },
+			wantNames: []string{"Kenya Sunrise"},
+		},
+		{
+			name:      "search filter by roaster",
+			mutate:    func(f *CoffeeFilters) { f.Search = "Onyx" },
+			wantNames: []string{"Kenya Sunrise"},
+		},
+		{
+			name:      "search filter by region",
+			mutate:    func(f *CoffeeFilters) { f.Search = "Nyeri" },
+			wantNames: []string{"Kenya Sunrise"},
+		},
+		{
+			name:      "search filter by variety",
+			mutate:    func(f *CoffeeFilters) { f.Search = "SL28" },
+			wantNames: []string{"Kenya Sunrise"},
+		},
+		{
+			name:      "search filter by process",
+			mutate:    func(f *CoffeeFilters) { f.Search = "Washed" },
+			wantNames: []string{"Kenya Sunrise"},
+		},
+		{
 			name:      "roaster no filter",
 			wantNames: []string{"Kenya Sunrise"},
 		},
