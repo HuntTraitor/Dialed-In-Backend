@@ -24,7 +24,7 @@ env:
   S3_BUCKET: ${{ vars.S3_BUCKET }}
 
 jobs:
-  build:
+  build_and_test:
     runs-on: ubuntu-latest
     environment: Dialed-In-Backend-CI
 
