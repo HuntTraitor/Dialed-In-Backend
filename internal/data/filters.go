@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
@@ -34,6 +33,32 @@ type CoffeeFilters struct {
 	MinCost      *float64
 	MaxCost      *float64
 	Filters
+}
+
+type RecipeFilters struct {
+	Search    string
+	MethodID  int
+	CoffeeID  int
+	GrinderID int
+	Name      string
+	GramsIn   int
+	MlOut     int
+	WaterTemp string
+	GrindSize string
+	Filters
+}
+
+var RecipeSafeSortList = []string{
+	"name",
+	"grams_in",
+	"ml_out",
+	"water_temp",
+	"grind_size",
+	"-name",
+	"-grams_in",
+	"-ml_out",
+	"-water_temp",
+	"-grind_size",
 }
 
 var CoffeeSafeSortList = []string{
@@ -79,7 +104,6 @@ func ValidateFilters(v *validator.Validator, f Filters) {
 
 // sortColumn checks if the client sorted by something in our safe list and if so, extract the name from it
 func (f Filters) sortColumn() string {
-	fmt.Println(f.Sort)
 	for _, safeValue := range f.SortSafelist {
 		if f.Sort == safeValue {
 			column := strings.TrimPrefix(f.Sort, "-")

@@ -680,6 +680,239 @@ func TestGetAllRecipes(t *testing.T) {
 		app.Client(token).GET("/v1/recipes").Expect(t).
 			Status(http.StatusOK).JSON().Object().Value("recipes").Array().Empty()
 	})
+
+	t.Run("Successfully applies all recipe filters in one query", func(t *testing.T) {
+		user := app.Factory.CreateUser(t)
+		token := app.Factory.Login(t, user.Email, user.Password)
+
+		coffee := app.Factory.CreateCoffee(t, token, testutils.ValidCoffeeForm())
+		grinder := app.Factory.CreateGrinder(t, token, testutils.ValidGrinder())
+
+		targetInfo := testutils.ValidV60Info()
+		targetInfo.Name = "FilterTarget Morning V60"
+		targetInfo.WaterTemp = "96°C"
+		targetInfo.GrindSize = "Medium Fine"
+		targetInfo.GramIn = 18
+		targetInfo.MlOut = 300
+		targetInfoJSON, _ := json.Marshal(targetInfo)
+
+		target := app.Factory.CreateRecipe(t, token, 1, testutils.CreateRecipeRequest{
+			MethodId:  1,
+			CoffeeId:  coffee.Coffee.ID,
+			GrinderId: grinder.ID,
+			Info:      targetInfoJSON,
+		})
+
+		decoyInfo := testutils.ValidV60Info()
+		decoyInfo.Name = "FilterTarget Morning V60 Decoy"
+		decoyInfo.WaterTemp = "96°C"
+		decoyInfo.GrindSize = "Medium Fine"
+		decoyInfo.GramIn = 19
+		decoyInfo.MlOut = 300
+		decoyInfoJSON, _ := json.Marshal(decoyInfo)
+		app.Factory.CreateRecipe(t, token, 1, testutils.CreateRecipeRequest{
+			MethodId:  1,
+			CoffeeId:  coffee.Coffee.ID,
+			GrinderId: grinder.ID,
+			Info:      decoyInfoJSON,
+		})
+
+		res := app.Client(token).
+			GET("/v1/recipes").
+			WithQuery("method_id", "1").
+			WithQuery("coffee_id", fmt.Sprintf("%d", coffee.Coffee.ID)).
+			WithQuery("grinder_id", fmt.Sprintf("%d", grinder.ID)).
+			WithQuery("search", "FilterTarget Morning").
+			WithQuery("name", "FilterTarget Morn").
+			WithQuery("water_temp", "96").
+			WithQuery("grind_size", "Medium Fi").
+			WithQuery("grams_in", "18").
+			WithQuery("ml_out", "300").
+			Expect(t).
+			Status(http.StatusOK)
+
+		recipes := res.JSON().Object().Value("recipes").Array()
+		recipes.Length().Equal(1)
+
+		recipe := recipes.Element(0).Object()
+		recipe.Value("id").Number().Equal(target.Recipe.ID)
+		info := recipe.Value("info").Object()
+		info.Value("name").String().Equal(targetInfo.Name)
+		info.Value("water_temp").String().Equal(targetInfo.WaterTemp)
+		info.Value("grind_size").String().Equal(targetInfo.GrindSize)
+		info.Value("grams_in").Number().Equal(float64(targetInfo.GramIn))
+		info.Value("ml_out").Number().Equal(float64(targetInfo.MlOut))
+	})
+}
+
+func TestGetAllRecipesSort(t *testing.T) {
+	t.Run("Successfully sorts recipes by sort value", func(t *testing.T) {
+		app := testutils.NewTestApp(t)
+		user := app.Factory.CreateUser(t)
+		token := app.Factory.Login(t, user.Email, user.Password)
+
+		alphaInfo := testutils.ValidV60Info()
+		alphaInfo.Name = "SortCase Alpha"
+		alphaJSON, _ := json.Marshal(alphaInfo)
+		app.Factory.CreateRecipe(t, token, 1, testutils.CreateRecipeRequest{
+			MethodId: 1,
+			Info:     alphaJSON,
+		})
+
+		bravoInfo := testutils.ValidV60Info()
+		bravoInfo.Name = "SortCase Bravo"
+		bravoJSON, _ := json.Marshal(bravoInfo)
+		app.Factory.CreateRecipe(t, token, 1, testutils.CreateRecipeRequest{
+			MethodId: 1,
+			Info:     bravoJSON,
+		})
+
+		res := app.Client(token).
+			GET("/v1/recipes").
+			WithQuery("name", "SortCase").
+			WithQuery("sort", "-name").
+			Expect(t).
+			Status(http.StatusOK)
+
+		recipes := res.JSON().Object().Value("recipes").Array()
+		recipes.Length().Equal(2)
+		recipes.Element(0).Object().Path("$.info.name").String().Equal("SortCase Bravo")
+		recipes.Element(1).Object().Path("$.info.name").String().Equal("SortCase Alpha")
+	})
+
+	t.Run("Fails when sort value is invalid", func(t *testing.T) {
+		app := testutils.NewTestApp(t)
+		user := app.Factory.CreateUser(t)
+		token := app.Factory.Login(t, user.Email, user.Password)
+
+		app.Client(token).
+			GET("/v1/recipes").
+			WithQuery("sort", "not-a-real-sort").
+			Expect(t).
+			Status(http.StatusUnprocessableEntity).
+			JSON().Object().
+			Path("$.error.sort").String().Equal("invalid sort value")
+	})
+}
+
+func TestGetAllRecipesPagination(t *testing.T) {
+	app := testutils.NewTestApp(t)
+	user := app.Factory.CreateUser(t)
+	token := app.Factory.Login(t, user.Email, user.Password)
+	for i := 0; i < 11; i++ {
+		app.Factory.CreateRecipe(t, token, 1, testutils.ValidV60Recipe())
+	}
+
+	tests := []struct {
+		name   string
+		mutate func(*testutils.RequestBuilder)
+		assert func(*httpexpect.Response)
+	}{
+		{
+			name: "No pagination counter defaults to 10 pages",
+			mutate: func(req *testutils.RequestBuilder) {
+			},
+			assert: func(res *httpexpect.Response) {
+				obj := res.Status(http.StatusOK).JSON().Object()
+				obj.Value("recipes").Array().Length().Equal(10)
+				metadata := obj.Value("metadata").Object()
+				metadata.Value("current_page").Number().Equal(1)
+				metadata.Value("page_size").Number().Equal(10)
+				metadata.Value("first_page").Number().Equal(1)
+				metadata.Value("last_page").Number().Equal(2)
+				metadata.Value("total_records").Number().Equal(11)
+			},
+		},
+		{
+			name: "Pagination set to 11 pages",
+			mutate: func(req *testutils.RequestBuilder) {
+				req.WithQuery("page_size", "11")
+			},
+			assert: func(res *httpexpect.Response) {
+				obj := res.Status(http.StatusOK).JSON().Object()
+				obj.Value("recipes").Array().Length().Equal(11)
+				metadata := obj.Value("metadata").Object()
+				metadata.Value("current_page").Number().Equal(1)
+				metadata.Value("page_size").Number().Equal(11)
+				metadata.Value("first_page").Number().Equal(1)
+				metadata.Value("last_page").Number().Equal(1)
+				metadata.Value("total_records").Number().Equal(11)
+			},
+		},
+		{
+			name: "Pagination page number correctly gives values",
+			mutate: func(req *testutils.RequestBuilder) {
+				req.WithQuery("page_size", "10")
+				req.WithQuery("page", "2")
+			},
+			assert: func(res *httpexpect.Response) {
+				obj := res.Status(http.StatusOK).JSON().Object()
+				obj.Value("recipes").Array().Length().Equal(1)
+				metadata := obj.Value("metadata").Object()
+				metadata.Value("current_page").Number().Equal(2)
+				metadata.Value("page_size").Number().Equal(10)
+				metadata.Value("first_page").Number().Equal(1)
+				metadata.Value("last_page").Number().Equal(2)
+				metadata.Value("total_records").Number().Equal(11)
+			},
+		},
+		{
+			name: "Pagination page number too high returns empty values",
+			mutate: func(req *testutils.RequestBuilder) {
+				req.WithQuery("page", "10000")
+			},
+			assert: func(res *httpexpect.Response) {
+				obj := res.Status(http.StatusOK).JSON().Object()
+				obj.Value("recipes").Array().Length().Equal(0)
+				obj.Value("metadata").Object().Empty()
+			},
+		},
+		{
+			name: "Pagination page number negative returns error",
+			mutate: func(req *testutils.RequestBuilder) {
+				req.WithQuery("page", "-1")
+			},
+			assert: func(res *httpexpect.Response) {
+				res.Status(http.StatusUnprocessableEntity).
+					JSON().Object().
+					Path("$.error.page").String().
+					Contains("greater than zero")
+			},
+		},
+		{
+			name: "Pagination page size too high returns error",
+			mutate: func(req *testutils.RequestBuilder) {
+				req.WithQuery("page_size", "10000")
+			},
+			assert: func(res *httpexpect.Response) {
+				res.Status(http.StatusUnprocessableEntity).
+					JSON().Object().
+					Path("$.error.page_size").String().
+					Contains("maximum")
+			},
+		},
+		{
+			name: "Pagination page size too low returns error",
+			mutate: func(req *testutils.RequestBuilder) {
+				req.WithQuery("page_size", "-1")
+			},
+			assert: func(res *httpexpect.Response) {
+				res.Status(http.StatusUnprocessableEntity).
+					JSON().Object().
+					Path("$.error.page_size").String().
+					Contains("maximum")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := app.Client(token).GET("/v1/recipes")
+			tt.mutate(req)
+			res := req.Expect(t)
+			tt.assert(res)
+		})
+	}
 }
 
 func TestPatchRecipe(t *testing.T) {

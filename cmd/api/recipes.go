@@ -149,9 +149,35 @@ func (app *application) createRecipeHandler(w http.ResponseWriter, r *http.Reque
 func (app *application) listRecipesHandler(w http.ResponseWriter, r *http.Request) {
 	user := app.contextGetUser(r)
 
+	var input struct {
+		data.RecipeFilters
+	}
+
+	v := validator.New()
 	qs := r.URL.Query()
 
-	recipes, err := app.models.Recipes.GetAllForUser(user.ID, qs)
+	input.RecipeFilters.MethodID = app.readInt(qs, "method_id", 0, v)
+	input.RecipeFilters.CoffeeID = app.readInt(qs, "coffee_id", 0, v)
+	input.RecipeFilters.GrinderID = app.readInt(qs, "grinder_id", 0, v)
+	input.RecipeFilters.Search = app.readString(qs, "search", "")
+	input.RecipeFilters.Name = app.readString(qs, "name", "")
+	input.RecipeFilters.WaterTemp = app.readString(qs, "water_temp", "")
+	input.RecipeFilters.GrindSize = app.readString(qs, "grind_size", "")
+	input.RecipeFilters.GramsIn = app.readInt(qs, "grams_in", 0, v)
+	input.RecipeFilters.MlOut = app.readInt(qs, "ml_out", 0, v)
+
+	input.RecipeFilters.Filters.Page = app.readInt(qs, "page", data.DEFAULT_PAGE, v)
+	input.RecipeFilters.Filters.PageSize = app.readInt(qs, "page_size", data.DEFAULT_PAGE_SIZE, v)
+	input.RecipeFilters.Filters.Sort = app.readString(qs, "sort", "name")
+
+	input.RecipeFilters.Filters.SortSafelist = data.RecipeSafeSortList
+
+	if data.ValidateFilters(v, input.Filters); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	recipes, metadata, err := app.models.Recipes.GetAllForUser(user.ID, input.RecipeFilters)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -225,7 +251,7 @@ func (app *application) listRecipesHandler(w http.ResponseWriter, r *http.Reques
 		fullRecipes = append(fullRecipes, fullRecipe)
 	}
 
-	err = app.writeJSON(w, http.StatusOK, envelope{"recipes": fullRecipes}, nil)
+	err = app.writeJSON(w, http.StatusOK, envelope{"metadata": metadata, "recipes": fullRecipes}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}

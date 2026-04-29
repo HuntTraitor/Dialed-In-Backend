@@ -7,8 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
-	"strconv"
 	"time"
 
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
@@ -161,7 +159,7 @@ func ValidateV60Phase(v *validator.Validator, phase *V60Phase) {
 
 type RecipeModelInterface interface {
 	Insert(recipe *Recipe) error
-	GetAllForUser(userID int64, params url.Values) ([]*Recipe, error)
+	GetAllForUser(userID int64, filters RecipeFilters) ([]*Recipe, MetaData, error)
 	Get(id int64, userId int64) (*Recipe, error)
 	Update(recipe *Recipe) error
 	Delete(id int64, userID int64) error
@@ -188,81 +186,102 @@ func (m RecipeModel) Insert(recipe *Recipe) error {
 	return nil
 }
 
-func (m RecipeModel) GetAllForUser(userID int64, params url.Values) ([]*Recipe, error) {
-
-	// Edge case if 0 is passed into the query parameter
-	if params.Get("method_id") == "0" || params.Get("coffee_id") == "0" || params.Get("grinder_id") == "0" {
-		return []*Recipe{}, nil
-	}
-
-	query := `SELECT * FROM recipes WHERE user_id = $1`
-	args := []any{userID}
-	argIndex := 2
-
-	// Safely parse optional parameters
-	methodID, _ := strconv.ParseInt(params.Get("method_id"), 10, 64)
-	coffeeID, _ := strconv.ParseInt(params.Get("coffee_id"), 10, 64)
-	grinderID, _ := strconv.ParseInt(params.Get("grinder_id"), 10, 64)
-
-	if methodID != 0 {
-		query += fmt.Sprintf(" AND method_id = $%d", argIndex)
-		args = append(args, methodID)
-		argIndex++
-	}
-
-	if coffeeID != 0 {
-		query += fmt.Sprintf(" AND coffee_id = $%d", argIndex)
-		args = append(args, coffeeID)
-		argIndex++
-	}
-
-	if grinderID != 0 {
-		query += fmt.Sprintf(" AND grinder_id = $%d", argIndex)
-		args = append(args, grinderID)
-		argIndex++
-	}
-
-	query += " ORDER BY coffee_id IS NOT NULL, coffee_id"
+func (m RecipeModel) GetAllForUser(userID int64, filters RecipeFilters) ([]*Recipe, MetaData, error) {
+	query := fmt.Sprintf(`
+		SELECT count(*) OVER(),
+			id,
+			user_id,
+			coffee_id,
+			method_id,
+			grinder_id,
+			info,
+			version,
+			created_at
+		FROM recipes 
+        WHERE user_id = $1
+        
+        -- ID
+		AND (method_id::int = $2 OR $2 = 0)
+		AND (coffee_id::int = $3 OR $3 = 0)
+		AND (grinder_id::int = $4 OR $4 = 0)
+        
+    	-- General Search
+		AND (
+		  $5 = ''
+		  OR info->>'name'    ILIKE '%%' || $5 || '%%'
+		)
+		
+		-- Text search
+		AND (info->>'name'    ILIKE '%%' || $6 || '%%' OR $6 = '')
+		AND (info->>'water_temp' ILIKE '%%' || $7 || '%%' OR $7 = '')
+		AND (info->>'grind_size'  ILIKE '%%' || $8 || '%%' OR $8 = '')
+        
+        -- JSONB int filters
+		AND ((info->>'grams_in')::int = $9 OR $9 = 0)
+		AND ((info->>'ml_out')::int = $10 OR $10 = 0)
+		
+		ORDER BY %s %s, id ASC
+		LIMIT $11 OFFSET $12;`, filters.sortColumn(), filters.sortDirection())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
+	fmt.Println(filters)
+
+	args := []any{
+		userID,            // $1
+		filters.MethodID,  // $2
+		filters.CoffeeID,  // $3
+		filters.GrinderID, // $4
+		filters.Search,    // $5
+		filters.Name,      // $6
+		filters.WaterTemp, // $7
+		filters.GrindSize, // $8
+		filters.GramsIn,   // $9
+		filters.MlOut,     // $10
+		filters.limit(),   // $11
+		filters.offset(),  // $12
+	}
+
 	rows, err := m.DB.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, MetaData{}, err
 	}
 
 	defer rows.Close()
 
+	totalRecords := 0
 	recipes := []*Recipe{}
 	var infoBytes []byte
 
 	for rows.Next() {
 		var recipe Recipe
 		err = rows.Scan(
+			&totalRecords,
 			&recipe.ID,
 			&recipe.UserID,
 			&recipe.CoffeeID,
 			&recipe.MethodID,
+			&recipe.GrinderID,
 			&infoBytes,
 			&recipe.Version,
 			&recipe.CreatedAt,
-			&recipe.GrinderID,
 		)
 		if err != nil {
-			return nil, err
+			return nil, MetaData{}, err
 		}
 		err = json.Unmarshal(infoBytes, &recipe.Info)
 		if err != nil {
-			return nil, err
+			return nil, MetaData{}, err
 		}
 		recipes = append(recipes, &recipe)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, err
+		return nil, MetaData{}, err
 	}
-	return recipes, nil
+	metadata := calculateMetadata(totalRecords, filters.Page, filters.PageSize)
+	return recipes, metadata, nil
 }
 
 func (m RecipeModel) Update(recipe *Recipe) error {
@@ -311,9 +330,18 @@ func (m RecipeModel) Get(id int64, userId int64) (*Recipe, error) {
 		return nil, ErrRecordNotFound
 	}
 
-	query := `SELECT * FROM recipes
-						WHERE id = $1 and user_id = $2
-						`
+	query := `SELECT
+				id,
+				user_id,
+				coffee_id,
+				method_id,
+				grinder_id,
+				info,
+				version,
+				created_at
+			FROM recipes
+			WHERE id = $1 and user_id = $2
+					`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -326,10 +354,10 @@ func (m RecipeModel) Get(id int64, userId int64) (*Recipe, error) {
 		&recipe.UserID,
 		&recipe.CoffeeID,
 		&recipe.MethodID,
+		&recipe.GrinderID,
 		&infoBytes,
 		&recipe.Version,
 		&recipe.CreatedAt,
-		&recipe.GrinderID,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
