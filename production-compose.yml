@@ -64,7 +64,6 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
     depends_on:
       - app
-      - frontend
     restart: unless-stopped
 
   loki:
