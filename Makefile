@@ -168,8 +168,8 @@ prod/deploy:
 		git pull && \
 		chmod +x scripts/migrate.sh && \
 		./scripts/migrate.sh && \
-		docker compose -f production-compose.yml pull app && \
-		docker compose -f production-compose.yml up -d app \
+		docker compose -f production-compose.yml pull && \
+		docker compose -f production-compose.yml up -d \
 	'
 
 ## prod/connect: connect to the production server
