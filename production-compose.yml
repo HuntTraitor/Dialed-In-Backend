@@ -59,7 +59,7 @@ services:
     container_name: prometheus
     volumes:
       - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus-data:/prometheus
+      - /mnt/dialed_in_data/prometheus:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
     depends_on:
@@ -73,7 +73,7 @@ services:
       - "-config.file=/etc/loki/config.yml"
     volumes:
       - ./observability/loki:/etc/loki:ro
-      - loki-data:/loki
+      - /mnt/dialed_in_data/loki:/loki
     restart: unless-stopped
 
   alloy:
@@ -101,7 +101,7 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_AUTH_ANONYMOUS_ENABLED=false
     volumes:
-      - grafana-data:/var/lib/grafana
+      - /mnt/dialed_in_data/grafana:/var/lib/grafana
       - ./observability/grafana/provisioning:/etc/grafana/provisioning
       - ./observability/grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
@@ -113,9 +113,6 @@ volumes:
   pgdata:
   caddy_data:
   caddy_config:
-  prometheus-data:
-  loki-data:
-  grafana-data:
 
 networks:
   default:
