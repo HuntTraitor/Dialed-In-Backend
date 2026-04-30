@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"errors"
-	"expvar"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,8 +11,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/hunttraitor/dialed-in-backend/internal/data"
 	"github.com/hunttraitor/dialed-in-backend/internal/validator"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/tomasen/realip"
 	"golang.org/x/time/rate"
 )
@@ -93,6 +95,7 @@ func (app *application) logRequest(next http.Handler) http.Handler {
 			"proto", r.Proto,
 			"method", r.Method,
 			"uri", r.URL.RequestURI(),
+			"query_params", r.URL.Query(),
 			"body", sanitized,
 		)
 
@@ -242,28 +245,66 @@ func (app *application) requireActivatedUser(next http.Handler) http.Handler {
 	return app.requireAuthenticatedUser(fn)
 }
 
-// metrics updates information about the requests, responses, and response times received by the server
-func (app *application) metrics(next http.Handler) http.Handler {
-	var (
-		totalRequestsReceived           = expvar.NewInt("total_requests_received")
-		totalResponsesSent              = expvar.NewInt("total_responses_sent")
-		totalProcessingTimeMicroseconds = expvar.NewInt("total_processing_time_microseconds")
-		totalResponsesSentByStatus      = expvar.NewMap("total_responses_sent_by_status")
+var (
+	httpRequestsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_requests_total",
+			Help: "The total number of HTTP requests received.",
+		},
+		[]string{"method", "route"},
 	)
 
+	httpResponsesTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_responses_total",
+			Help: "The total number of HTTP responses sent.",
+		},
+		[]string{"method", "route", "status"},
+	)
+
+	httpRequestDurationSeconds = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_request_duration_seconds",
+			Help:    "The duration of HTTP requests in seconds.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"method", "route", "status"},
+	)
+)
+
+// metrics records request counts, response status counts, and request durations.
+func (app *application) metrics(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
-		totalRequestsReceived.Add(1)
-
-		// create new metricsResponseWriter
 		ww := newWrappedResponseWriter(w)
+
 		next.ServeHTTP(ww, r)
 
-		totalResponsesSent.Add(1)
-		totalResponsesSentByStatus.Add(strconv.Itoa(ww.statusCode), 1)
-		duration := time.Since(start).Microseconds()
+		route := "unknown"
+		if rctx := chi.RouteContext(r.Context()); rctx != nil {
+			if pattern := rctx.RoutePattern(); pattern != "" {
+				route = pattern
+			}
+		}
 
-		totalProcessingTimeMicroseconds.Add(duration)
+		status := strconv.Itoa(ww.statusCode)
+
+		httpRequestsTotal.WithLabelValues(
+			r.Method,
+			route,
+		).Inc()
+
+		httpResponsesTotal.WithLabelValues(
+			r.Method,
+			route,
+			status,
+		).Inc()
+
+		httpRequestDurationSeconds.WithLabelValues(
+			r.Method,
+			route,
+			status,
+		).Observe(time.Since(start).Seconds())
 	})
 }

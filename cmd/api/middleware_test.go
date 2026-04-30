@@ -2,16 +2,16 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
-	"github.com/hunttraitor/dialed-in-backend/internal/data"
-	"github.com/hunttraitor/dialed-in-backend/internal/mocks"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/hunttraitor/dialed-in-backend/internal/data"
+	"github.com/hunttraitor/dialed-in-backend/internal/mocks"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRecoverPanic(t *testing.T) {
@@ -73,7 +73,7 @@ func TestLogRequest(t *testing.T) {
 		rr := httptest.NewRecorder()
 
 		loggerMiddleware.ServeHTTP(rr, req)
-		expectedRequestLog := `method=GET uri=/ body=""`
+		expectedRequestLog := `method=GET uri=/ query_params=map[] body=""`
 		expectedResponseLog := `status=200 body="Test Response Body"`
 
 		// Read from the buffer and assert the logs are correct
@@ -335,50 +335,21 @@ func TestMetricsMiddleware(t *testing.T) {
 	}
 
 	router := app.routes()
-	ts := newTestServer(router)
-	defer ts.Close()
 
-	t.Run("Successfully updates metrics on request", func(t *testing.T) {
-		// Send a request to healthcheck
+	t.Run("Exposes Prometheus metrics endpoint", func(t *testing.T) {
+		// Trigger at least one request through API middleware.
 		req := httptest.NewRequest(http.MethodGet, "/v1/healthcheck", nil)
 		rr := httptest.NewRecorder()
 		router.ServeHTTP(rr, req)
+		assert.Equal(t, http.StatusOK, rr.Code)
 
-		// Send a request to /debug/vars to check output
-		req = httptest.NewRequest(http.MethodGet, "/debug/vars", nil)
+		// Confirm /metrics is exposed and includes our metric families.
+		req = httptest.NewRequest(http.MethodGet, "/metrics", nil)
 		rr = httptest.NewRecorder()
 		router.ServeHTTP(rr, req)
-
-		var responseBody map[string]any
-		err := json.Unmarshal(rr.Body.Bytes(), &responseBody)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// assert the debug has a 200 response but not a 400 response
-		assert.Equal(t, float64(2), responseBody["total_requests_received"])
-		assert.Equal(t, float64(1), responseBody["total_responses_sent"])
-		assert.Greater(t, responseBody["total_processing_time_microseconds"], float64(0))
-		assert.Equal(t, float64(1), responseBody["total_responses_sent_by_status"].(map[string]any)["200"])
-		assert.Equal(t, nil, responseBody["total_responses_sent_by_status"].(map[string]any)["400"])
-
-		// Send a intentional 400 response request
-		req = httptest.NewRequest(http.MethodPost, "/v1/users", bytes.NewReader([]byte("hi")))
-		rr = httptest.NewRecorder()
-		router.ServeHTTP(rr, req)
-
-		// Check /debug/vars again
-		req = httptest.NewRequest(http.MethodGet, "/debug/vars", nil)
-		rr = httptest.NewRecorder()
-		router.ServeHTTP(rr, req)
-
-		err = json.Unmarshal(rr.Body.Bytes(), &responseBody)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// Assert that the 400 request was not logged
-		assert.Equal(t, float64(2), responseBody["total_responses_sent_by_status"].(map[string]any)["200"])
-		assert.Equal(t, float64(1), responseBody["total_responses_sent_by_status"].(map[string]any)["400"])
+		assert.Equal(t, http.StatusOK, rr.Code)
+		assert.Contains(t, rr.Body.String(), "http_requests_total")
+		assert.Contains(t, rr.Body.String(), "http_responses_total")
+		assert.Contains(t, rr.Body.String(), "http_request_duration_seconds")
 	})
 }

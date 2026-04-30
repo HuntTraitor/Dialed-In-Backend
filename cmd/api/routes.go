@@ -9,17 +9,30 @@ import (
 	"os"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func (app *application) routes() http.Handler {
 	router := chi.NewRouter()
 
-	if app.config.metrics {
-		router.Use(app.metrics)
-	}
+	router.Use(app.recoverPanic)
+	router.Handle("/metrics", promhttp.Handler())
 
-	// Global middleware
-	router.Use(app.recoverPanic, app.authenticate)
+	// API routes - logged and rate limited
+	router.Group(func(r chi.Router) {
+		r.Use(app.authenticate)
+		r.Use(app.logRequest, app.rateLimit)
+		r.Use(app.metrics)
+
+		r.Route("/v1/healthcheck", app.loadHealthCheckRoutes)
+		r.Route("/v1/users", app.loadUserRoutes)
+		r.Route("/v1/tokens", app.loadTokenRoutes)
+		r.Route("/v1/methods", app.loadMethodRoutes)
+		r.Route("/v1/coffees", app.loadCoffeeRoutes)
+		r.Route("/v1/recipes", app.loadRecipeRoutes)
+		r.Route("/v1/grinders", app.loadGrinderRoutes)
+		r.Route("/debug", app.loadDebugRoutes)
+	})
 
 	router.NotFound(app.notFoundResponse)
 	router.MethodNotAllowed(app.methodNotAllowedResponse)
@@ -34,20 +47,6 @@ func (app *application) routes() http.Handler {
 		}
 		router.Handle("/*", app.spaHandler(http.FS(subFS)))
 	}
-
-	// API routes - logged and rate limited
-	router.Group(func(r chi.Router) {
-		r.Use(app.logRequest, app.rateLimit)
-
-		r.Route("/v1/healthcheck", app.loadHealthCheckRoutes)
-		r.Route("/v1/users", app.loadUserRoutes)
-		r.Route("/v1/tokens", app.loadTokenRoutes)
-		r.Route("/v1/methods", app.loadMethodRoutes)
-		r.Route("/v1/coffees", app.loadCoffeeRoutes)
-		r.Route("/v1/recipes", app.loadRecipeRoutes)
-		r.Route("/v1/grinders", app.loadGrinderRoutes)
-		r.Route("/debug", app.loadDebugRoutes)
-	})
 
 	return router
 }
@@ -119,7 +118,7 @@ func (app *application) loadGrinderRoutes(router chi.Router) {
 }
 
 func (app *application) devProxyHandler() http.HandlerFunc {
-	target, _ := url.Parse("http://frontend:5173") // your docker service name + vite port
+	target, _ := url.Parse("http://frontend:5173")
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	return func(w http.ResponseWriter, r *http.Request) {
 		proxy.ServeHTTP(w, r)
