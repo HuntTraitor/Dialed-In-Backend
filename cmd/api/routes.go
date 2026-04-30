@@ -20,8 +20,8 @@ func (app *application) routes() http.Handler {
 
 	// API routes - logged and rate limited
 	router.Group(func(r chi.Router) {
-		r.Use(app.authenticate)
 		r.Use(app.logRequest, app.rateLimit)
+		r.Use(app.authenticate)
 		r.Use(app.metrics)
 
 		r.Route("/v1/healthcheck", app.loadHealthCheckRoutes)

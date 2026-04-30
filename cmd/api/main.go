@@ -124,7 +124,9 @@ func main() {
 		os.Exit(0)
 	}
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}))
 
 	db, err := openDb(cfg)
 	if err != nil {

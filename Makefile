@@ -177,9 +177,9 @@ prod/deploy:
 prod/connect:
 	ssh root@${production_host_ip}
 
-## prod/grafana: opens a tunnel to view grafana stats in prod
-.PHONY: prod/grafana
-prod/grafana:
-	ssh -N -L 3001:127.0.0.1:3001 root@${production_host_ip}
+## prod/logs: opens a tunnel to view grafana stats in prod
+.PHONY: prod/logs
+prod/logs:
+	ssh -N -L 9999:127.0.0.1:9999 root@${production_host_ip}
 
 

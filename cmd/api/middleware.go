@@ -79,35 +79,69 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 // logRequest logs the incoming request in the logger
 func (app *application) logRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		if strings.HasPrefix(r.URL.Path, "/assets/") {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		rawBody, _ := io.ReadAll(r.Body)
+		rawBody, err := io.ReadAll(r.Body)
+		if err != nil {
+			app.logger.Error("failed to read request body",
+				"error", err,
+				"method", r.Method,
+				"uri", r.URL.RequestURI(),
+			)
+
+			http.Error(w, "failed to read request body", http.StatusBadRequest)
+			return
+		}
+
 		r.Body = io.NopCloser(bytes.NewReader(rawBody))
 
-		sanitized := sanitizeMultipartBody(rawBody, r.Header.Get("Content-Type"))
-
-		app.logger.Info("received request",
+		app.logger.Debug("received request",
 			"ip", r.RemoteAddr,
 			"proto", r.Proto,
 			"method", r.Method,
 			"uri", r.URL.RequestURI(),
 			"query_params", r.URL.Query(),
-			"body", sanitized,
+			"body", bodyForLog(rawBody, r.Header.Get("Content-Type")),
 		)
 
 		ww := newWrappedResponseWriter(w)
+
 		next.ServeHTTP(ww, r)
 
-		responseBody := sanitizeMultipartBody(ww.body.Bytes(), w.Header().Get("Content-Type"))
+		status := ww.statusCode
+		if status == 0 {
+			status = http.StatusOK
+		}
 
-		app.logger.Info("received response",
-			"status", ww.statusCode,
-			"body", responseBody,
-		)
+		attrs := []any{
+			"ip", r.RemoteAddr,
+			"proto", r.Proto,
+			"method", r.Method,
+			"path", r.URL.Path,
+			"uri", r.URL.RequestURI(),
+			"query_params", r.URL.Query(),
+			"status", status,
+		}
+
+		if status >= 400 {
+			attrs = append(attrs,
+				"response_body", bodyForLog(ww.body.Bytes(), ww.Header().Get("Content-Type")),
+			)
+		}
+
+		switch {
+		case status >= 500:
+			app.logger.Error("request failed", attrs...)
+
+		case status >= 400:
+			app.logger.Warn("request warning", attrs...)
+
+		default:
+			app.logger.Info("request completed", attrs...)
+		}
 	})
 }
 

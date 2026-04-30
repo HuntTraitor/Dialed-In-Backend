@@ -1,13 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"mime"
-	"mime/multipart"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -269,62 +266,6 @@ func GetOptionalString(r *http.Request, field string) *string {
 		return &value
 	}
 	return nil
-}
-
-// sanitizeMultipartBody reads the body and removes huge image payloads from the multipart body
-func sanitizeMultipartBody(body []byte, contentType string) string {
-	if !strings.HasPrefix(contentType, "multipart/form-data") {
-		return sanitizeNonMultipartBody(body)
-	}
-
-	ct, params, err := mime.ParseMediaType(contentType)
-	if err != nil || ct != "multipart/form-data" {
-		return "[could not parse multipart]"
-	}
-
-	boundary, ok := params["boundary"]
-	if !ok {
-		return "[multipart with no boundary]"
-	}
-
-	mr := multipart.NewReader(bytes.NewReader(body), boundary)
-	var out bytes.Buffer
-
-	for {
-		part, err := mr.NextPart()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			break
-		}
-
-		name := part.FormName()
-		filename := part.FileName()
-
-		if filename != "" {
-			// File upload → OMIT the file bytes entirely
-			out.WriteString(fmt.Sprintf(
-				"--%s\n[field=%s filename=%s omitted]\n",
-				boundary, name, filename,
-			))
-		} else {
-			// Normal form field → read & log safely
-			data, _ := io.ReadAll(part)
-			cleaned := strings.TrimSpace(string(data))
-			out.WriteString(fmt.Sprintf(
-				"--%s\n%s=%q\n",
-				boundary, name, cleaned,
-			))
-		}
-	}
-
-	return out.String()
-}
-
-// sanitizeNonMultipartBody just returns the stringified body
-func sanitizeNonMultipartBody(body []byte) string {
-	return string(body)
 }
 
 func (n *NullInt64) UnmarshalJSON(data []byte) error {
