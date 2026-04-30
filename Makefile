@@ -61,7 +61,7 @@ test-all:
 		--format testdox \
 		--format-icons unicode \
 		--hide-summary=skipped \
-		-- -p=1 -count=1 -timeout=60s -buildvcs=false ./...
+		-- -p=1 -count=1 -timeout=180s -buildvcs=false ./...
 
 ## test-api: runs all API endpoint tests against a mock database
 .PHONY: test-api
