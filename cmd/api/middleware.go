@@ -124,12 +124,7 @@ func (app *application) logRequest(next http.Handler) http.Handler {
 			"uri", r.URL.RequestURI(),
 			"query_params", r.URL.Query(),
 			"status", status,
-		}
-
-		if status >= 400 {
-			attrs = append(attrs,
-				"response_body", bodyForLog(ww.body.Bytes(), ww.Header().Get("Content-Type")),
-			)
+			"response_body", bodyForLog(ww.body.Bytes(), ww.Header().Get("Content-Type")),
 		}
 
 		switch {
